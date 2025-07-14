@@ -258,12 +258,32 @@ function displayUpdateStatus(data) {
     
     if (data.has_update) {
         statusDiv.className = 'update-status status-update-available';
-        statusMessage.innerHTML = `
+        
+        let statusHTML = `
             <strong>Update Available!</strong><br>
             Current Version: ${data.current_version}<br>
             Latest Version: ${data.latest_version}
         `;
-        downloadBtn.style.display = 'inline-block';
+        
+        // Check if assets are available
+        if (data.has_assets === false || data.assets_count === 0) {
+            statusHTML += `<br><br><div style="color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeaa7;">
+                <strong>Warning:</strong> Update is available but no download files are attached to the release.<br>
+                The release needs to have a ZIP file uploaded. Please contact the administrator.
+            </div>`;
+            downloadBtn.style.display = 'none';
+        } else {
+            downloadBtn.style.display = 'inline-block';
+        }
+        
+        // Display warning message if present
+        if (data.warning) {
+            statusHTML += `<br><br><div style="color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px; border: 1px solid #ffeaa7;">
+                <strong>Notice:</strong> ${data.warning}
+            </div>`;
+        }
+        
+        statusMessage.innerHTML = statusHTML;
         viewReleaseBtn.style.display = 'inline-block';
     } else {
         statusDiv.className = 'update-status status-up-to-date';

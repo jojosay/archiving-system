@@ -1,6 +1,6 @@
 <?php
 // Update Manager Class for GitHub-based updates
-require_once 'config/version.php';
+require_once __DIR__ . '/../config/version.php';
 
 class UpdateManager {
     private $github_api_base;
@@ -39,14 +39,24 @@ class UpdateManager {
             $current_version = defined('APP_VERSION') ? APP_VERSION : '1.0.0';
             $latest_version = ltrim($latest_release['tag_name'], 'v');
             
+            $has_update = compareVersions($latest_version, $current_version) > 0;
+            $assets = $latest_release['assets'] ?? [];
+            
             $update_info = [
                 'success' => true,
                 'current_version' => $current_version,
                 'latest_version' => $latest_version,
-                'has_update' => compareVersions($latest_version, $current_version) > 0,
+                'has_update' => $has_update,
+                'has_assets' => !empty($assets),
+                'assets_count' => count($assets),
                 'release_info' => $latest_release,
                 'checked_at' => time()
             ];
+            
+            // Add warning if update available but no assets
+            if ($has_update && empty($assets)) {
+                $update_info['warning'] = 'Update available but no download files found in the release.';
+            }
             
             // Cache the result
             $this->cacheUpdateInfo($update_info);
@@ -124,11 +134,20 @@ class UpdateManager {
     public function getDownloadUrl($asset_name = null) {
         $update_info = $this->checkForUpdates();
         
-        if (!$update_info['success'] || !$update_info['has_update']) {
+        if (!$update_info['success']) {
+            return null;
+        }
+        
+        if (!$update_info['has_update']) {
             return null;
         }
         
         $assets = $update_info['release_info']['assets'] ?? [];
+        
+        // Check if there are any assets
+        if (empty($assets)) {
+            return null;
+        }
         
         // If no specific asset name provided, get the first .zip file
         if (!$asset_name) {
@@ -147,6 +166,18 @@ class UpdateManager {
         }
         
         return null;
+    }
+    
+    // Check if release has downloadable assets
+    public function hasDownloadableAssets() {
+        $update_info = $this->checkForUpdates();
+        
+        if (!$update_info['success'] || !$update_info['has_update']) {
+            return false;
+        }
+        
+        $assets = $update_info['release_info']['assets'] ?? [];
+        return !empty($assets);
     }
 }
 ?>

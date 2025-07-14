@@ -16,6 +16,7 @@ error_log.md
 tmp_*
 temp/
 cache/
+acli.exe
 
 # Environment and Local Config
 .env

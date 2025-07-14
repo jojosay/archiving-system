@@ -9,7 +9,7 @@ define('DB_PASS', '');
 
 // Application Configuration
 define('APP_NAME', 'Archiving System');
-define('APP_VERSION', '1.0.1');
+// APP_VERSION is now defined in version.php
 define('BASE_URL', 'http://localhost/archiving-system/'); // Update this for your server
 
 // Include Branding Configuration

@@ -1,0 +1,30 @@
+{
+    "version": "1.0.2",
+    "build_date": "2025-07-14 10:56:22",
+    "package_name": "archiving-system-v1.0.2",
+    "files_count": 174,
+    "excluded_patterns": [
+        ".git",
+        "data\/",
+        "storage\/documents\/",
+        "backups\/",
+        "releases\/",
+        "tmp_",
+        ".log",
+        "php_error_log",
+        "acli.exe",
+        "node_modules\/",
+        ".env",
+        "composer.lock",
+        "package-lock.json",
+        ".DS_Store",
+        "Thumbs.db"
+    ],
+    "excluded_extensions": [
+        ".exe",
+        ".msi",
+        ".dmg",
+        ".deb",
+        ".rpm"
+    ]
+}
