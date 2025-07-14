@@ -1,0 +1,2 @@
+-Use small incremental tasks approach.
+-perform smaller tasks (break each action down) - create file first - make changes in small chunks to reduce the token throughputs

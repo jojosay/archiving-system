@@ -1,0 +1,32 @@
+{
+    "version": "1.0.0",
+    "last_updated": "2025-07-13 04:18:42",
+    "assets": {
+        "css": {
+            "vendor": [],
+            "custom": [
+                "assets\/css\/custom\/app.css"
+            ]
+        },
+        "js": {
+            "vendor": [
+                "assets\/js\/vendor\/sortable.min.js"
+            ],
+            "app": [
+                "assets\/js\/app\/main.js"
+            ]
+        },
+        "fonts": [],
+        "images": [],
+        "icons": []
+    },
+    "external_dependencies": [
+        {
+            "name": "SortableJS",
+            "version": "1.15.0",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "local_path": "assets\/js\/vendor\/sortable.min.js",
+            "purpose": "Drag and drop functionality for document fields"
+        }
+    ]
+}

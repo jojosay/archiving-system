@@ -1,0 +1,12 @@
+/* Civil Registry Archiving System - Custom Styles */
+
+/* Override any vendor styles here */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    background-color: #f0f9ff;
+}
+
+/* Add any additional custom styles */

@@ -1,0 +1,32 @@
+{
+    "branding": {
+        "app_name": "HRMO Archiving System",
+        "app_description": "Secure document archiving and management system",
+        "app_tagline": "Efficient \u2022 Secure \u2022 Reliable",
+        "office_name": "Human Resource Management Office",
+        "office_department": "Document Management Department",
+        "office_address": "123 Government Street, City, State 12345",
+        "office_phone": "+1 (555) 123-4567",
+        "office_email": "info@hrmo.gov",
+        "office_website": "https:\/\/www.hrmo.gov",
+        "primary_color": "#2C3E50",
+        "secondary_color": "#F39C12",
+        "accent_color": "#3498DB",
+        "background_color": "#ECF0F1",
+        "logo_primary": "",
+        "favicon": "",
+        "footer_text": "",
+        "copyright_text": "",
+        "show_logo": false,
+        "show_tagline": false,
+        "show_office_info": false
+    },
+    "export_date": "2025-07-13 07:31:23",
+    "version": "1.0.0",
+    "assets": {
+        "logos_path": "branding\/logos\/",
+        "favicons_path": "branding\/favicons\/",
+        "themes_path": "branding\/themes\/",
+        "custom_css_path": "branding\/custom\/"
+    }
+}

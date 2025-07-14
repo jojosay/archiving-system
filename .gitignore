@@ -1,0 +1,70 @@
+# Archiving System - Git Ignore File
+
+# User Data and Uploads
+data/
+storage/documents/
+storage/uploads/
+backups/
+
+# Logs
+*.log
+php_error_log
+error_log
+error_log.md
+
+# Temporary Files
+tmp_*
+temp/
+cache/
+
+# Environment and Local Config
+.env
+.env.local
+config/local.php
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Composer (if used)
+vendor/
+composer.lock
+
+# Node.js (if used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Release Packages
+releases/
+*.zip
+*.tar.gz
+
+# Database Dumps
+*.sql
+*.db
+*.sqlite
+
+# Sensitive Files
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Local Development
+local/
+dev/
+test_*

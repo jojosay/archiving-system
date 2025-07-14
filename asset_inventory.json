@@ -1,0 +1,87 @@
+{
+    "scan_date": "2025-07-13 04:17:44",
+    "files_scanned": 69,
+    "dependencies_found": 6,
+    "dependencies": [
+        {
+            "type": "CDN JS",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "file": "pages\\document_fields.php",
+            "line": 315
+        },
+        {
+            "type": "Other CDN",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "file": "pages\\document_fields.php",
+            "line": 315
+        },
+        {
+            "type": "External HTTP",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "file": "pages\\document_fields.php",
+            "line": 315
+        },
+        {
+            "type": "CDN JS",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "file": "pages\\document_fields.php",
+            "line": 315
+        },
+        {
+            "type": "Other CDN",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "file": "pages\\document_fields.php",
+            "line": 315
+        },
+        {
+            "type": "External HTTP",
+            "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+            "file": "pages\\document_fields.php",
+            "line": 315
+        }
+    ],
+    "grouped_dependencies": {
+        "CDN JS": [
+            {
+                "type": "CDN JS",
+                "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+                "file": "pages\\document_fields.php",
+                "line": 315
+            },
+            {
+                "type": "CDN JS",
+                "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+                "file": "pages\\document_fields.php",
+                "line": 315
+            }
+        ],
+        "Other CDN": [
+            {
+                "type": "Other CDN",
+                "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+                "file": "pages\\document_fields.php",
+                "line": 315
+            },
+            {
+                "type": "Other CDN",
+                "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+                "file": "pages\\document_fields.php",
+                "line": 315
+            }
+        ],
+        "External HTTP": [
+            {
+                "type": "External HTTP",
+                "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+                "file": "pages\\document_fields.php",
+                "line": 315
+            },
+            {
+                "type": "External HTTP",
+                "url": "https:\/\/cdn.jsdelivr.net\/npm\/sortablejs@1.15.0\/Sortable.min.js",
+                "file": "pages\\document_fields.php",
+                "line": 315
+            }
+        ]
+    }
+}

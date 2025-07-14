@@ -1,0 +1,81 @@
+/* Custom Theme CSS - Generated on 2025-07-13 03:55:10 */
+
+:root {
+  /* Color Variables */
+  --primary-color: #7c2d12;
+  --secondary-color: #ea580c;
+  --accent-color: #facc15;
+  --background-color: #fefce8;
+  --text-color: #2C3E50;
+  --sidebar-color: #7c2d12;
+  --success-color: #27AE60;
+  --warning-color: #F39C12;
+  --error-color: #E74C3C;
+
+  /* Typography Variables */
+  --font-family: 'Open Sans', sans-serif;
+  --font-size-base: 1rem;
+  --font-size-small: 0.875rem;
+  --font-size-large: 1.125rem;
+  --line-height: 1.6;
+
+  /* Layout Variables */
+  --sidebar-width: 250px;
+  --header-height: auto;
+  --content-padding: 2rem;
+  --border-radius: 8px;
+  --box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Base Styles */
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height);
+  color: var(--text-color);
+  background-color: var(--background-color);
+}
+
+/* Layout Styles */
+.sidebar {
+  width: var(--sidebar-width);
+  background: var(--sidebar-color);
+}
+
+.main-content {
+  margin-left: var(--sidebar-width);
+  padding: var(--content-padding);
+}
+
+/* Component Styles */
+.page-header {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.nav-item:hover {
+  border-left-color: var(--secondary-color);
+}
+
+.nav-item.active {
+  border-left-color: var(--secondary-color);
+}
+
+/* Typography Styles */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--primary-color);
+}
+
+.text-primary { color: var(--primary-color); }
+.text-secondary { color: var(--secondary-color); }
+.text-accent { color: var(--accent-color); }
+
+/* Color Styles */
+.bg-primary { background-color: var(--primary-color); }
+.bg-secondary { background-color: var(--secondary-color); }
+.bg-accent { background-color: var(--accent-color); }
+.bg-success { background-color: var(--success-color); }
+.bg-warning { background-color: var(--warning-color); }
+.bg-error { background-color: var(--error-color); }
+
