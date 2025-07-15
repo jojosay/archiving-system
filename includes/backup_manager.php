@@ -4,9 +4,12 @@
  * Handles database and file backup/restore operations
  */
 
+require_once __DIR__ . '/backup_progress_tracker.php';
+
 class BackupManager {
     private $db;
     private $backup_dir;
+    private $progress_tracker;
     
     public function __construct($database) {
         $this->db = $database->getConnection();
@@ -30,12 +33,32 @@ class BackupManager {
      */
     public function exportDatabase() {
         try {
+            // Initialize progress tracker
+            $this->progress_tracker = new BackupProgressTracker('database_backup');
+            $operation_id = $this->progress_tracker->getOperationId();
+            
+            // Set limits for large database operations
+            set_time_limit(0); // No time limit
+            ini_set('memory_limit', '2G'); // Increase memory limit
+            ini_set('max_execution_time', 0); // No execution time limit
+            
+            $this->progress_tracker->updateProgress('initializing', 'Starting database backup...', 5);
+            
             $timestamp = date('Y-m-d_H-i-s');
             $filename = "database_backup_{$timestamp}.sql";
             $filepath = $this->backup_dir . $filename;
             
+            // Estimate database size
+            $db_size_mb = $this->progress_tracker->estimateDatabaseSize(new Database());
+            $this->progress_tracker->updateProgress('analyzing', "Database size: {$db_size_mb} MB", 10, [
+                'database_size_mb' => $db_size_mb,
+                'estimated_time' => $db_size_mb > 1000 ? 'Several minutes' : 'Less than a minute'
+            ]);
+            
             // Get database configuration
             require_once __DIR__ . '/../config/config.php';
+            
+            $this->progress_tracker->updateProgress('preparing', 'Locating mysqldump executable...', 20);
             
             // Build mysqldump command
             // Try common MySQL paths
@@ -56,9 +79,11 @@ class BackupManager {
             }
 
             if (!file_exists($mysqldump_exe)) {
+                $this->progress_tracker->markFailed('mysqldump.exe not found at ' . $mysqldump_exe);
                 return [
                     'success' => false,
-                    'message' => 'mysqldump.exe not found at ' . $mysqldump_exe
+                    'message' => 'mysqldump.exe not found at ' . $mysqldump_exe,
+                    'operation_id' => $operation_id
                 ];
             }
             if (!is_executable($mysqldump_exe)) {
@@ -69,28 +94,56 @@ class BackupManager {
             }
 
             $password_arg = empty(DB_PASS) ? '' : ' --password=' . escapeshellarg(DB_PASS);
+            
+            // Enhanced options for large databases
+            $large_db_options = [
+                '--single-transaction',     // Consistent backup for InnoDB
+                '--routines',              // Include stored procedures
+                '--triggers',              // Include triggers
+                '--lock-tables=false',     // Don't lock tables (for large DBs)
+                '--quick',                 // Retrieve rows one at a time
+                '--extended-insert=false', // Separate INSERT for each row (safer for large data)
+                '--max_allowed_packet=1G', // Handle large packets
+                '--default-character-set=utf8mb4' // Proper charset
+            ];
+            
             $command = sprintf(
-                "%s --host=%s --user=%s%s %s > %s 2>&1",
+                "%s --host=%s --user=%s%s %s %s > %s 2>&1",
                 escapeshellarg($mysqldump_exe),
                 escapeshellarg(DB_HOST),
                 escapeshellarg(DB_USER),
                 $password_arg,
+                implode(' ', $large_db_options),
                 escapeshellarg(DB_NAME),
                 escapeshellarg($filepath)
             );
+            
+            $this->progress_tracker->updateProgress('executing', 'Running mysqldump command...', 50, [
+                'command' => 'mysqldump with enhanced options for large databases'
+            ]);
             
             error_log("Executing command: " . $command);
 
             // Execute mysqldump
             exec($command, $output, $return_code);
             
+            $this->progress_tracker->updateProgress('verifying', 'Verifying backup file...', 80);
+            
             if ($return_code === 0 && file_exists($filepath) && filesize($filepath) > 0) {
+                $file_size_mb = $this->progress_tracker->getFileSizeMB($filepath);
+                $this->progress_tracker->markCompleted("Database backup completed successfully ({$file_size_mb} MB)", [
+                    'filename' => $filename,
+                    'file_size_mb' => $file_size_mb,
+                    'database_size_mb' => $db_size_mb
+                ]);
+                
                 return [
                     'success' => true,
                     'message' => 'Database backup created successfully',
                     'filename' => $filename,
                     'filepath' => $filepath,
-                    'size' => filesize($filepath)
+                    'size' => filesize($filepath),
+                    'operation_id' => $operation_id
                 ];
             } else {
                 $error_message = 'Failed to create database backup.';
@@ -103,16 +156,32 @@ class BackupManager {
                 } else {
                     $error_message .= ' Output: ' . implode("\n", $output);
                 }
+                
+                $this->progress_tracker->markFailed($error_message, [
+                    'return_code' => $return_code,
+                    'output' => $output
+                ]);
+                
                 return [
                     'success' => false,
-                    'message' => $error_message
+                    'message' => $error_message,
+                    'operation_id' => $operation_id
                 ];
             }
             
         } catch (Exception $e) {
+            if (isset($this->progress_tracker)) {
+                $this->progress_tracker->markFailed('Error creating database backup: ' . $e->getMessage(), [
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $operation_id = $this->progress_tracker->getOperationId();
+            }
+            
             return [
                 'success' => false,
-                'message' => 'Error creating database backup: ' . $e->getMessage()
+                'message' => 'Error creating database backup: ' . $e->getMessage(),
+                'operation_id' => $operation_id ?? null
             ];
         }
     }
@@ -122,6 +191,11 @@ class BackupManager {
      */
     public function exportFiles() {
         try {
+            // Set limits for large file operations
+            set_time_limit(0); // No time limit
+            ini_set('memory_limit', '2G'); // Increase memory limit
+            ini_set('max_execution_time', 0); // No execution time limit
+            
             $timestamp = date('Y-m-d_H-i-s');
             $filename = "files_backup_{$timestamp}.zip";
             $filepath = $this->backup_dir . $filename;
@@ -230,15 +304,41 @@ class BackupManager {
      */
     public function createCompleteBackup() {
         try {
+            // Initialize progress tracker for complete backup
+            $this->progress_tracker = new BackupProgressTracker('complete_backup');
+            $operation_id = $this->progress_tracker->getOperationId();
+            
+            // Set limits for large operations
+            set_time_limit(0);
+            ini_set('memory_limit', '2G');
+            ini_set('max_execution_time', 0);
+            
+            $this->progress_tracker->updateProgress('initializing', 'Starting complete backup...', 5);
+            
             $results = [];
             
-            // Backup database
+            // Step 1: Backup database
+            $this->progress_tracker->updateProgress('step1_start', 'Step 1: Creating database backup...', 10);
             $db_result = $this->exportDatabase();
             $results['database'] = $db_result;
             
-            // Backup files
-            $files_result = $this->exportFiles();
-            $results['files'] = $files_result;
+            if ($db_result['success']) {
+                $this->progress_tracker->updateProgress('step1_complete', 'Database backup completed', 50);
+                
+                // Step 2: Backup files
+                $this->progress_tracker->updateProgress('step2_start', 'Step 2: Creating files backup...', 55);
+                $files_result = $this->exportFiles();
+                $results['files'] = $files_result;
+                
+                if ($files_result['success']) {
+                    $this->progress_tracker->updateProgress('step2_complete', 'Files backup completed', 90);
+                }
+            } else {
+                // If database backup fails, still try files backup
+                $this->progress_tracker->updateProgress('step2_start', 'Database failed, attempting files backup...', 55);
+                $files_result = $this->exportFiles();
+                $results['files'] = $files_result;
+            }
             
             $success = $db_result['success'] && $files_result['success'];
             
@@ -249,17 +349,43 @@ class BackupManager {
             if (!$files_result['success']) {
                 $error_message .= 'Files backup failed: ' . $files_result['message'];
             }
+            
+            // Mark operation as completed or failed
+            if ($success) {
+                $this->progress_tracker->markCompleted('Complete backup created successfully', [
+                    'database_file' => $db_result['filename'] ?? 'failed',
+                    'files_file' => $files_result['filename'] ?? 'failed',
+                    'database_size_mb' => isset($db_result['size']) ? round($db_result['size'] / 1024 / 1024, 2) : 0,
+                    'files_size_mb' => isset($files_result['size']) ? round($files_result['size'] / 1024 / 1024, 2) : 0
+                ]);
+            } else {
+                $this->progress_tracker->markFailed('Complete backup failed', [
+                    'database_success' => $db_result['success'],
+                    'files_success' => $files_result['success'],
+                    'error_details' => trim($error_message)
+                ]);
+            }
 
             return [
                 'success' => $success,
                 'message' => $success ? 'Complete backup created successfully' : 'Backup completed with errors: ' . trim($error_message),
-                'results' => $results
+                'results' => $results,
+                'operation_id' => $operation_id
             ];
             
         } catch (Exception $e) {
+            if (isset($this->progress_tracker)) {
+                $this->progress_tracker->markFailed('Error creating complete backup: ' . $e->getMessage(), [
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $operation_id = $this->progress_tracker->getOperationId();
+            }
+            
             return [
                 'success' => false,
-                'message' => 'Error creating complete backup: ' . $e->getMessage()
+                'message' => 'Error creating complete backup: ' . $e->getMessage(),
+                'operation_id' => $operation_id ?? null
             ];
         }
     }
@@ -318,18 +444,39 @@ class BackupManager {
      */
     public function restoreDatabase($filename) {
         try {
+            // Initialize progress tracker
+            $this->progress_tracker = new BackupProgressTracker('database_restore');
+            $operation_id = $this->progress_tracker->getOperationId();
+            
+            // Set limits for large database operations
+            set_time_limit(0); // No time limit
+            ini_set('memory_limit', '2G'); // Increase memory limit
+            ini_set('max_execution_time', 0); // No execution time limit
+            
+            $this->progress_tracker->updateProgress('initializing', 'Starting database restore...', 5);
+            
             $filepath = $this->backup_dir . $filename;
             
             // Check if backup file exists and is not empty
             if (!file_exists($filepath) || filesize($filepath) === 0) {
+                $this->progress_tracker->markFailed('Backup file not found or is empty');
                 return [
                     'success' => false,
-                    'message' => 'Backup file not found or is empty'
+                    'message' => 'Backup file not found or is empty',
+                    'operation_id' => $operation_id
                 ];
             }
             
+            $file_size_mb = $this->progress_tracker->getFileSizeMB($filepath);
+            $this->progress_tracker->updateProgress('analyzing', "Backup file size: {$file_size_mb} MB", 15, [
+                'backup_file' => $filename,
+                'file_size_mb' => $file_size_mb
+            ]);
+            
             // Get database configuration
             require_once __DIR__ . '/../config/config.php';
+            
+            $this->progress_tracker->updateProgress('preparing', 'Locating mysql executable...', 25);
             
             // Build mysql command to restore database
             // Try common MySQL paths
@@ -359,25 +506,51 @@ class BackupManager {
                 escapeshellarg($filepath)
             );
             
+            $this->progress_tracker->updateProgress('executing', 'Restoring database from backup...', 60);
+            
             // Execute mysql restore
             exec($command, $output, $return_code);
             
+            $this->progress_tracker->updateProgress('verifying', 'Verifying database restore...', 90);
+            
             if ($return_code === 0) {
+                $this->progress_tracker->markCompleted("Database restored successfully from {$filename}", [
+                    'backup_file' => $filename,
+                    'file_size_mb' => $file_size_mb
+                ]);
+                
                 return [
                     'success' => true,
-                    'message' => 'Database restored successfully'
+                    'message' => 'Database restored successfully',
+                    'operation_id' => $operation_id
                 ];
             } else {
+                $error_message = 'Failed to restore database. Return code: ' . $return_code . ' Output: ' . implode("\n", $output);
+                $this->progress_tracker->markFailed($error_message, [
+                    'return_code' => $return_code,
+                    'output' => $output
+                ]);
+                
                 return [
                     'success' => false,
-                    'message' => 'Failed to restore database. Return code: ' . $return_code . ' Output: ' . implode("\n", $output)
+                    'message' => $error_message,
+                    'operation_id' => $operation_id
                 ];
             }
             
         } catch (Exception $e) {
+            if (isset($this->progress_tracker)) {
+                $this->progress_tracker->markFailed('Error restoring database: ' . $e->getMessage(), [
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $operation_id = $this->progress_tracker->getOperationId();
+            }
+            
             return [
                 'success' => false,
-                'message' => 'Error restoring database: ' . $e->getMessage()
+                'message' => 'Error restoring database: ' . $e->getMessage(),
+                'operation_id' => $operation_id ?? null
             ];
         }
     }
@@ -387,6 +560,11 @@ class BackupManager {
      */
     public function restoreFiles($filename) {
         try {
+            // Set limits for large file operations
+            set_time_limit(0); // No time limit
+            ini_set('memory_limit', '2G'); // Increase memory limit
+            ini_set('max_execution_time', 0); // No execution time limit
+            
             $filepath = $this->backup_dir . $filename;
             $project_root = realpath(__DIR__ . '/..');
             
@@ -512,59 +690,108 @@ class BackupManager {
      */
     public function guidedRestore($db_filename, $files_filename, $restore_order = 'database_first') {
         try {
+            // Initialize progress tracker for guided restore
+            $this->progress_tracker = new BackupProgressTracker('guided_restore');
+            $operation_id = $this->progress_tracker->getOperationId();
+            
+            // Set limits for large operations
+            set_time_limit(0);
+            ini_set('memory_limit', '2G');
+            ini_set('max_execution_time', 0);
+            
+            $this->progress_tracker->updateProgress('initializing', 'Starting guided restore process...', 5);
+            
             $results = [];
             $overall_success = true;
             $messages = [];
             
+            $this->progress_tracker->updateProgress('validating', 'Validating backup files...', 10);
+            
             // Validate backup files exist
             if (!file_exists($this->backup_dir . $db_filename)) {
+                $this->progress_tracker->markFailed('Database backup file not found: ' . $db_filename);
                 return [
                     'success' => false,
-                    'message' => 'Database backup file not found: ' . $db_filename
+                    'message' => 'Database backup file not found: ' . $db_filename,
+                    'operation_id' => $operation_id
                 ];
             }
             
             if (!file_exists($this->backup_dir . $files_filename)) {
+                $this->progress_tracker->markFailed('Files backup file not found: ' . $files_filename);
                 return [
                     'success' => false,
-                    'message' => 'Files backup file not found: ' . $files_filename
+                    'message' => 'Files backup file not found: ' . $files_filename,
+                    'operation_id' => $operation_id
                 ];
             }
+            
+            // Get file sizes for progress tracking
+            $db_size_mb = $this->progress_tracker->getFileSizeMB($this->backup_dir . $db_filename);
+            $files_size_mb = $this->progress_tracker->getFileSizeMB($this->backup_dir . $files_filename);
+            
+            $this->progress_tracker->updateProgress('planning', "Restore plan: {$restore_order}", 15, [
+                'database_backup' => $db_filename,
+                'files_backup' => $files_filename,
+                'db_size_mb' => $db_size_mb,
+                'files_size_mb' => $files_size_mb,
+                'restore_order' => $restore_order
+            ]);
             
             error_log("Starting guided restore with order: " . $restore_order);
             
             if ($restore_order === 'database_first') {
                 // Recommended order: Database first, then files
                 
+                $this->progress_tracker->updateProgress('step1_start', 'Step 1: Starting database restore...', 25);
+                
                 // Step 1: Restore Database
                 error_log("Step 1: Restoring database from " . $db_filename);
+                
+                // Create a temporary progress tracker for database restore
+                $temp_tracker = $this->progress_tracker;
                 $db_result = $this->restoreDatabase($db_filename);
+                $this->progress_tracker = $temp_tracker; // Restore main tracker
+                
                 $results['database'] = $db_result;
                 
                 if ($db_result['success']) {
                     $messages[] = "[SUCCESS] Database restored successfully";
+                    $this->progress_tracker->updateProgress('step1_complete', 'Database restore completed successfully', 50);
                     
                     // Step 2: Restore Files
+                    $this->progress_tracker->updateProgress('step2_start', 'Step 2: Starting files restore...', 55);
                     error_log("Step 2: Restoring files from " . $files_filename);
+                    
+                    // Files restore doesn't have progress tracking yet, so we'll simulate it
                     $files_result = $this->restoreFiles($files_filename);
                     $results['files'] = $files_result;
                     
                     if ($files_result['success']) {
                         $messages[] = "[SUCCESS] Files restored successfully";
                         $messages[] = "[COMPLETE] Full restore finished - system is ready";
+                        $this->progress_tracker->updateProgress('step2_complete', 'Files restore completed successfully', 90);
                     } else {
                         $overall_success = false;
                         $messages[] = "[ERROR] Files restore failed: " . $files_result['message'];
                         $messages[] = "[WARNING] Database was restored but files failed - system may be inconsistent";
+                        $this->progress_tracker->updateProgress('step2_failed', 'Files restore failed', 75, [
+                            'error' => $files_result['message']
+                        ]);
                     }
                 } else {
                     $overall_success = false;
                     $messages[] = "[ERROR] Database restore failed: " . $db_result['message'];
                     $messages[] = "[WARNING] Skipping files restore due to database failure";
+                    $this->progress_tracker->updateProgress('step1_failed', 'Database restore failed', 40, [
+                        'error' => $db_result['message']
+                    ]);
                 }
                 
             } else {
                 // Alternative order: Files first, then database
+                
+                $this->progress_tracker->updateProgress('step1_start', 'Step 1: Starting files restore...', 25);
                 
                 // Step 1: Restore Files
                 error_log("Step 1: Restoring files from " . $files_filename);
@@ -573,41 +800,84 @@ class BackupManager {
                 
                 if ($files_result['success']) {
                     $messages[] = "[SUCCESS] Files restored successfully";
+                    $this->progress_tracker->updateProgress('step1_complete', 'Files restore completed successfully', 50);
                     
                     // Step 2: Restore Database
+                    $this->progress_tracker->updateProgress('step2_start', 'Step 2: Starting database restore...', 55);
                     error_log("Step 2: Restoring database from " . $db_filename);
+                    
+                    // Create a temporary progress tracker for database restore
+                    $temp_tracker = $this->progress_tracker;
                     $db_result = $this->restoreDatabase($db_filename);
+                    $this->progress_tracker = $temp_tracker; // Restore main tracker
+                    
                     $results['database'] = $db_result;
                     
                     if ($db_result['success']) {
                         $messages[] = "[SUCCESS] Database restored successfully";
                         $messages[] = "[COMPLETE] Full restore finished - system is ready";
+                        $this->progress_tracker->updateProgress('step2_complete', 'Database restore completed successfully', 90);
                     } else {
                         $overall_success = false;
                         $messages[] = "[ERROR] Database restore failed: " . $db_result['message'];
                         $messages[] = "[WARNING] Files were restored but database failed - system may be inconsistent";
+                        $this->progress_tracker->updateProgress('step2_failed', 'Database restore failed', 75, [
+                            'error' => $db_result['message']
+                        ]);
                     }
                 } else {
                     $overall_success = false;
                     $messages[] = "[ERROR] Files restore failed: " . $files_result['message'];
                     $messages[] = "[WARNING] Skipping database restore due to files failure";
+                    $this->progress_tracker->updateProgress('step1_failed', 'Files restore failed', 40, [
+                        'error' => $files_result['message']
+                    ]);
                 }
             }
             
             $final_message = implode("\n", $messages);
             error_log("Guided restore completed. Success: " . ($overall_success ? 'true' : 'false'));
             
+            // Mark operation as completed or failed
+            if ($overall_success) {
+                $this->progress_tracker->markCompleted("Guided restore completed successfully", [
+                    'database_backup' => $db_filename,
+                    'files_backup' => $files_filename,
+                    'restore_order' => $restore_order,
+                    'db_size_mb' => $db_size_mb,
+                    'files_size_mb' => $files_size_mb,
+                    'total_steps' => 2
+                ]);
+            } else {
+                $this->progress_tracker->markFailed("Guided restore failed", [
+                    'database_backup' => $db_filename,
+                    'files_backup' => $files_filename,
+                    'restore_order' => $restore_order,
+                    'failure_reason' => $final_message
+                ]);
+            }
+            
             return [
                 'success' => $overall_success,
                 'message' => $final_message,
                 'results' => $results,
-                'restore_order' => $restore_order
+                'restore_order' => $restore_order,
+                'operation_id' => $operation_id
             ];
             
         } catch (Exception $e) {
+            if (isset($this->progress_tracker)) {
+                $this->progress_tracker->markFailed('Error during guided restore: ' . $e->getMessage(), [
+                    'exception' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+                $operation_id = $this->progress_tracker->getOperationId();
+            }
+            
             return [
                 'success' => false,
-                'message' => 'Error during guided restore: ' . $e->getMessage()
+                'message' => 'Error during guided restore: ' . $e->getMessage(),
+                'operation_id' => $operation_id ?? null
             ];
         }
     }

@@ -1,7 +1,7 @@
 {
-    "version": "1.0.3",
-    "build_date": "2025-01-14 15:30:00",
-    "package_name": "archiving-system-v1.0.3",
+    "version": "1.0.5",
+    "build_date": "2025-01-15 12:00:00",
+    "package_name": "archiving-system-v1.0.5",
     "files_count": 174,
     "excluded_patterns": [
         ".git",

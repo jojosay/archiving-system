@@ -1,6 +1,7 @@
 <?php
 require_once 'includes/layout.php';
 require_once 'includes/backup_manager.php';
+require_once 'includes/backup_progress_modal.php';
 
 $database = new Database();
 $backupManager = new BackupManager($database);
@@ -17,6 +18,16 @@ if ($_POST) {
             $result = $backupManager->exportDatabase();
             $message = $result['message'];
             $message_type = $result['success'] ? 'success' : 'error';
+            
+            // If operation has progress tracking, redirect to show progress
+            if (isset($result['operation_id'])) {
+                $operation_id = $result['operation_id'];
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        showProgressModal('{$operation_id}', 'Database Backup Progress');
+                    });
+                </script>";
+            }
             break;
             
         case 'create_files_backup':
@@ -29,6 +40,16 @@ if ($_POST) {
             $result = $backupManager->createCompleteBackup();
             $message = $result['message'];
             $message_type = $result['success'] ? 'success' : 'error';
+            
+            // If operation has progress tracking, show progress modal
+            if (isset($result['operation_id'])) {
+                $operation_id = $result['operation_id'];
+                echo "<script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        showProgressModal('{$operation_id}', 'Complete Backup Progress');
+                    });
+                </script>";
+            }
             break;
             
         case 'restore_database':
@@ -37,6 +58,16 @@ if ($_POST) {
                 $result = $backupManager->restoreDatabase($filename);
                 $message = $result['message'];
                 $message_type = $result['success'] ? 'success' : 'error';
+                
+                // If operation has progress tracking, show progress modal
+                if (isset($result['operation_id'])) {
+                    $operation_id = $result['operation_id'];
+                    echo "<script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            showProgressModal('{$operation_id}', 'Database Restore Progress');
+                        });
+                    </script>";
+                }
             }
             break;
             
@@ -73,6 +104,16 @@ if ($_POST) {
                     );
                     $message = $result['message'];
                     $message_type = $result['success'] ? 'success' : 'error';
+                    
+                    // If operation has progress tracking, show progress modal
+                    if (isset($result['operation_id'])) {
+                        $operation_id = $result['operation_id'];
+                        echo "<script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                showProgressModal('{$operation_id}', 'Guided Restore Progress');
+                            });
+                        </script>";
+                    }
                 }
             }
             break;
@@ -359,22 +400,430 @@ renderPageStart('Backup Management', 'backup_management');
     gap: 1.5rem;
 }
 
+/* Create backup cards grid - optimized for backup action cards */
+.create-backup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+/* Restore backup items grid - optimized for backup record cards */
+.restore-backup-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .backup-grid,
+    .create-backup-grid,
+    .restore-backup-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .restore-backup-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+}
+
 @media (min-width: 1280px) {
-    .backup-grid {
+    .restore-backup-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media (min-width: 1536px) {
-    .backup-grid {
+    .restore-backup-grid {
         grid-template-columns: repeat(3, 1fr);
     }
 }
 
 .backup-item {
-    min-height: 280px;
+    min-height: 320px;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Improved backup card sizing */
+.backup-card {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Enhanced Guided Restore Section Styles */
+.guided-restore-section {
+    margin-top: 3rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    overflow: hidden;
+    position: relative;
+}
+
+.guided-restore-header {
+    background: linear-gradient(135deg, #4c51bf 0%, #553c9a 100%);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.guided-restore-header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+}
+
+.guided-restore-icon-wrapper {
+    position: relative;
+    margin-right: 1.5rem;
+}
+
+.guided-restore-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    box-shadow: 0 10px 25px rgba(251, 191, 36, 0.4);
+    position: relative;
+    z-index: 2;
+}
+
+.guided-restore-pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    background: rgba(251, 191, 36, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+
+.guided-restore-title-section {
+    flex: 1;
+    color: white;
+}
+
+.guided-restore-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.guided-restore-subtitle {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1rem;
+}
+
+.guided-restore-features {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.feature-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.guided-restore-status {
+    display: flex;
+    align-items: center;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.status-text {
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.guided-restore-content {
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    padding: 2.5rem;
+}
+
+.guided-restore-info {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 2px solid #bfdbfe;
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 1.5rem;
+}
+
+.info-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.info-content {
+    flex: 1;
+}
+
+.info-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 0.5rem;
+}
+
+.info-description {
+    color: #1e40af;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.info-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.step-text {
+    color: #1e40af;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.guided-restore-form {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-weight: 700;
+    color: #374151;
+}
+
+.label-icon {
+    margin-right: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.label-text {
+    font-size: 1rem;
+}
+
+.form-select {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    background: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-help {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.form-submit {
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.guided-restore-button {
+    background: linear-gradient(135deg, #10b981 0%, #059669 25%, #3b82f6 75%, #1d4ed8 100%);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 1.25rem 3rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.guided-restore-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(16, 185, 129, 0.4);
+}
+
+.guided-restore-button:active {
+    transform: translateY(-1px);
+}
+
+.button-icon {
+    font-size: 1.3rem;
+}
+
+.button-text {
+    position: relative;
+    z-index: 2;
+}
+
+.button-shine {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.6s ease;
+}
+
+.guided-restore-button:hover .button-shine {
+    left: 100%;
+}
+
+.submit-help {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Responsive Design for Guided Restore */
+@media (max-width: 768px) {
+    .guided-restore-header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1.5rem;
+    }
+    
+    .guided-restore-icon-wrapper {
+        margin-right: 0;
+    }
+    
+    .guided-restore-title {
+        font-size: 2rem;
+    }
+    
+    .guided-restore-features {
+        justify-content: center;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+    
+    .guided-restore-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .info-steps {
+        grid-template-columns: 1fr;
+    }
 }
 
 .backup-item .action-button {
@@ -602,7 +1051,7 @@ renderPageStart('Backup Management', 'backup_management');
                 </div>
                 <div class="section-content">
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="create-backup-grid">
                     <form method="POST" class="w-full">
                         <input type="hidden" name="action" value="create_database_backup">
                         <button type="submit" class="backup-card database w-full">
@@ -673,7 +1122,7 @@ renderPageStart('Backup Management', 'backup_management');
                 
                 <?php if (!empty($backups)): ?>
                     <!-- Backup Grid Layout -->
-                    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <div class="restore-backup-grid">
                         <?php foreach ($backups as $backup): ?>
                             <div class="backup-item group h-fit">
                                 <!-- Backup Header with Type and Status -->
@@ -801,48 +1250,68 @@ renderPageStart('Backup Management', 'backup_management');
                 
                 <!-- Enhanced Guided Restore Section -->
                 <?php if (!empty($backup_pairs)): ?>
-                <div class="mt-8 bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 rounded-2xl border-2 border-green-200 shadow-lg overflow-hidden">
-                    <div class="bg-gradient-to-r from-green-600 to-blue-600 p-6 text-white">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center mr-4">
-                                    <span class="text-2xl">&#127919;</span>
+                <div class="guided-restore-section">
+                    <div class="guided-restore-header">
+                        <div class="guided-restore-header-content">
+                            <div class="guided-restore-icon-wrapper">
+                                <div class="guided-restore-icon">
+                                    <span class="guided-restore-emoji">&#128737;</span>
                                 </div>
-                                <div>
-                                    <h3 class="text-2xl font-bold">Guided Restore</h3>
-                                    <p class="text-green-100 mt-1">Recommended for safe and complete restoration</p>
+                                <div class="guided-restore-pulse"></div>
+                            </div>
+                            <div class="guided-restore-title-section">
+                                <h3 class="guided-restore-title">Guided Restore</h3>
+                                <p class="guided-restore-subtitle">Professional restoration with automated safety checks</p>
+                                <div class="guided-restore-features">
+                                    <span class="feature-badge">&#10004; Automated</span>
+                                    <span class="feature-badge">&#10004; Safe</span>
+                                    <span class="feature-badge">&#10004; Reliable</span>
                                 </div>
                             </div>
-                            <div class="hidden sm:flex items-center space-x-2 text-green-100">
-                                <span class="text-sm">&#10004;</span>
-                                <span class="text-sm font-medium">Safe & Reliable</span>
+                            <div class="guided-restore-status">
+                                <div class="status-indicator">
+                                    <div class="status-dot"></div>
+                                    <span class="status-text">Ready</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="p-6">
-                        <div class="mb-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                            <div class="flex items-start space-x-3">
-                                <span class="text-blue-600 text-xl">&#8505;</span>
-                                <div>
-                                    <h4 class="font-semibold text-blue-800 mb-2">What is Guided Restore?</h4>
-                                    <p class="text-blue-700 text-sm">Automatically restores both database and files from compatible backups in the correct order to ensure data integrity and system consistency.</p>
+                    <div class="guided-restore-content">
+                        <div class="guided-restore-info">
+                            <div class="info-icon">
+                                <span>&#8505;</span>
+                            </div>
+                            <div class="info-content">
+                                <h4 class="info-title">How Guided Restore Works</h4>
+                                <p class="info-description">Automatically restores both database and files from compatible backups in the correct order to ensure data integrity and system consistency.</p>
+                                <div class="info-steps">
+                                    <div class="step-item">
+                                        <span class="step-number">1</span>
+                                        <span class="step-text">Validates backup compatibility</span>
+                                    </div>
+                                    <div class="step-item">
+                                        <span class="step-number">2</span>
+                                        <span class="step-text">Restores in optimal order</span>
+                                    </div>
+                                    <div class="step-item">
+                                        <span class="step-number">3</span>
+                                        <span class="step-text">Verifies system integrity</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <form method="POST" onsubmit="return confirm('GUIDED RESTORE CONFIRMATION\\n\\nThis will perform a complete system restore:\\n\\n1. Database will be restored first\\n2. Files will be restored second\\n3. All current data will be replaced\\n\\nThis action cannot be undone!\\n\\nAre you sure you want to continue?');">
+                        <form method="POST" id="guidedRestoreForm" class="guided-restore-form" onsubmit="return startGuidedRestore(event);">
                             <input type="hidden" name="action" value="guided_restore">
                             
-                            <div class="grid lg:grid-cols-2 gap-6 mb-6">
-                                <div class="space-y-2">
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">
-                                        <span class="flex items-center">
-                                            <span class="mr-2">&#128209;</span>
-                                            Select Compatible Backup Pair
-                                        </span>
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label class="form-label">
+                                        <span class="label-icon">&#128209;</span>
+                                        <span class="label-text">Select Compatible Backup Pair</span>
                                     </label>
-                                    <select name="backup_pair" class="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white shadow-sm" required>
+                                    <select name="backup_pair" class="form-select" required>
                                         <option value="">Choose compatible backups...</option>
                                         <?php foreach ($backup_pairs as $index => $pair): ?>
                                             <option value="<?php echo $index; ?>">
@@ -852,21 +1321,19 @@ renderPageStart('Backup Management', 'backup_management');
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <p class="text-xs text-gray-500 mt-2">Only showing backup pairs created at the same time</p>
+                                    <p class="form-help">Only showing backup pairs created at the same time</p>
                                 </div>
                                 
-                                <div class="space-y-2">
-                                    <label class="block text-sm font-bold text-gray-700 mb-3">
-                                        <span class="flex items-center">
-                                            <span class="mr-2">&#8634;</span>
-                                            Restoration Order
-                                        </span>
+                                <div class="form-field">
+                                    <label class="form-label">
+                                        <span class="label-icon">&#8634;</span>
+                                        <span class="label-text">Restoration Order</span>
                                     </label>
-                                    <select name="restore_order" class="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white shadow-sm">
+                                    <select name="restore_order" class="form-select">
                                         <option value="database_first">&#128209; Database First (Recommended)</option>
                                         <option value="files_first">&#128193; Files First</option>
                                     </select>
-                                    <p class="text-xs text-gray-500 mt-2">Database first ensures proper file references</p>
+                                    <p class="form-help">Database first ensures proper file references</p>
                                 </div>
                             </div>
                             
@@ -902,6 +1369,15 @@ renderPageStart('Backup Management', 'backup_management');
                                     <span class="ml-3">&#8594;</span>
                                 </span>
                             </button>
+                            
+                            <div class="form-submit">
+                                <button type="submit" class="guided-restore-button">
+                                    <span class="button-icon">&#9654;</span>
+                                    <span class="button-text">Start Guided Restore</span>
+                                    <div class="button-shine"></div>
+                                </button>
+                                <p class="submit-help">This operation will completely replace your current system data</p>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -924,5 +1400,248 @@ renderPageStart('Backup Management', 'backup_management');
             </div>
         </div>
     </div>
+
+<script>
+/**
+ * Enhanced Backup Operations with Progress Tracking
+ */
+
+// Start database backup with progress tracking
+function startDatabaseBackup() {
+    if (confirm('Start database backup? This may take several minutes for large databases.')) {
+        // Create form data
+        const formData = new FormData();
+        formData.append('action', 'create_database_backup');
+        
+        // Start the backup operation
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Parse response to extract operation ID
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const scripts = doc.querySelectorAll('script');
+            
+            let operationId = null;
+            scripts.forEach(script => {
+                const content = script.textContent;
+                const match = content.match(/showProgressModal\('([^']+)'/);
+                if (match) {
+                    operationId = match[1];
+                }
+            });
+            
+            if (operationId) {
+                showProgressModal(operationId, 'Database Backup Progress');
+            } else {
+                // Fallback: reload page to show result
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Backup operation failed:', error);
+            alert('Failed to start backup operation. Please try again.');
+        });
+    }
+}
+
+// Start files backup with progress tracking
+function startFilesBackup() {
+    if (confirm('Start files backup? This may take several minutes for large file collections.')) {
+        const formData = new FormData();
+        formData.append('action', 'create_files_backup');
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            // For now, just reload the page
+            // TODO: Add progress tracking for file operations
+            location.reload();
+        })
+        .catch(error => {
+            console.error('Files backup failed:', error);
+            alert('Failed to start files backup. Please try again.');
+        });
+    }
+}
+
+// Start complete backup with progress tracking
+function startCompleteBackup() {
+    if (confirm('Start complete backup (database + files)? This may take several minutes.')) {
+        const formData = new FormData();
+        formData.append('action', 'create_complete_backup');
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            console.log('Complete backup response received');
+            
+            // Parse response to extract operation ID
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const scripts = doc.querySelectorAll('script');
+            
+            let operationId = null;
+            scripts.forEach(script => {
+                const content = script.textContent;
+                const match = content.match(/showProgressModal\('([^']+)'/);
+                if (match) {
+                    operationId = match[1];
+                    console.log('Found operation ID:', operationId);
+                }
+            });
+            
+            if (operationId) {
+                console.log('Starting progress modal for complete backup');
+                if (typeof showProgressModal === 'function') {
+                    showProgressModal(operationId, 'Complete Backup Progress');
+                } else {
+                    console.error('showProgressModal function not found');
+                    alert('Progress tracking not available. Operation started but progress cannot be shown.');
+                    location.reload();
+                }
+            } else {
+                console.log('No operation ID found, reloading page');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Complete backup failed:', error);
+            alert('Failed to start complete backup. Please try again.');
+        });
+    }
+}
+
+// Start guided restore with progress tracking
+function startGuidedRestore(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const backupPair = formData.get('backup_pair');
+    const restoreOrder = formData.get('restore_order');
+    
+    if (!backupPair) {
+        alert('Please select a backup pair to restore.');
+        return false;
+    }
+    
+    const confirmMessage = `GUIDED RESTORE CONFIRMATION
+
+This will perform a complete system restore:
+
+1. ${restoreOrder === 'database_first' ? 'Database will be restored first' : 'Files will be restored first'}
+2. ${restoreOrder === 'database_first' ? 'Files will be restored second' : 'Database will be restored second'}
+3. All current data will be replaced
+
+This action cannot be undone!
+
+Are you sure you want to continue?`;
+    
+    if (confirm(confirmMessage)) {
+        // Start the guided restore operation
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            console.log('Guided restore response received');
+            
+            // Parse response to extract operation ID
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const scripts = doc.querySelectorAll('script');
+            
+            let operationId = null;
+            scripts.forEach(script => {
+                const content = script.textContent;
+                const match = content.match(/showProgressModal\('([^']+)'/);
+                if (match) {
+                    operationId = match[1];
+                    console.log('Found operation ID:', operationId);
+                }
+            });
+            
+            if (operationId) {
+                console.log('Starting progress modal for guided restore');
+                
+                // Check if progress modal functions are available
+                if (typeof showProgressModal === 'function') {
+                    showProgressModal(operationId, 'Guided Restore Progress');
+                } else {
+                    console.error('showProgressModal function not found');
+                    alert('Progress tracking not available. Operation started but progress cannot be shown.');
+                    location.reload();
+                }
+            } else {
+                console.log('No operation ID found, checking for errors in response');
+                
+                // Check if there's an error message in the response
+                const errorElements = doc.querySelectorAll('.alert-error, .error');
+                if (errorElements.length > 0) {
+                    const errorMessage = errorElements[0].textContent.trim();
+                    alert('Guided restore failed: ' + errorMessage);
+                } else {
+                    console.log('No operation ID or error found, reloading page');
+                    location.reload();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Guided restore failed:', error);
+            alert('Failed to start guided restore. Please try again.');
+        });
+    }
+    
+    return false;
+}
+
+// Enhanced backup button click handlers
+document.addEventListener('DOMContentLoaded', function() {
+    // Find and enhance backup buttons
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        const actionInput = form.querySelector('input[name="action"]');
+        if (actionInput) {
+            const action = actionInput.value;
+            const button = form.querySelector('button[type="submit"]');
+            
+            if (action === 'create_database_backup' && button) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    startDatabaseBackup();
+                });
+            } else if (action === 'create_files_backup' && button) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    startFilesBackup();
+                });
+            } else if (action === 'create_complete_backup' && button) {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    startCompleteBackup();
+                });
+            }
+        }
+    });
+    
+    // Auto-show progress modal if operation ID is present
+    const urlParams = new URLSearchParams(window.location.search);
+    const operationId = urlParams.get('operation_id');
+    if (operationId) {
+        showProgressModal(operationId, 'Backup Operation Progress');
+    }
+});
+</script>
 
 <?php renderPageEnd(); ?>

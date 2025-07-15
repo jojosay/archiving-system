@@ -48,7 +48,7 @@ if ($page === 'logout' && $auth) {
 }
 
 // Check authentication for protected pages (only if not first install)
-$protected_pages = ['dashboard', 'user_register', 'user_list', 'document_types', 'document_fields', 'location_management', 'book_images', 'document_upload', 'document_archive', 'document_edit', 'backup_management', 'system_reset', 'reports', 'branding_management', 'deployment_center', 'package_builder', 'app_updates', 'about'];
+$protected_pages = ['dashboard', 'user_register', 'user_list', 'document_types', 'document_fields', 'location_management', 'book_images', 'document_upload', 'document_archive', 'document_edit', 'backup_management', 'system_reset', 'reports', 'branding_management', 'deployment_center', 'package_builder', 'app_updates', 'about', 'template_management', 'template_upload', 'template_gallery', 'template_categories', 'template_edit'];
 $public_pages = ['login', 'first_install'];
 
 if (!$is_first_install && in_array($page, $protected_pages) && (!$auth || !$auth->isLoggedIn())) {
@@ -116,6 +116,21 @@ switch($page) {
         break;
     case 'about':
         include 'pages/about.php';
+        break;
+    case 'template_management':
+        include 'pages/template_management.php';
+        break;
+    case 'template_upload':
+        include 'pages/template_upload.php';
+        break;
+    case 'template_gallery':
+        include 'pages/template_gallery.php';
+        break;
+    case 'template_categories':
+        include 'pages/template_categories.php';
+        break;
+    case 'template_edit':
+        include 'pages/template_edit.php';
         break;
     case 'test_book_images':
         include 'tmp_rovodev_test_book_images_api.php';

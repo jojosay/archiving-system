@@ -8,10 +8,13 @@ if (!$auth->isLoggedIn()) {
 require_once 'includes/layout.php';
 require_once 'includes/document_type_manager.php';
 require_once 'includes/document_manager.php';
+require_once 'includes/template_manager.php';
 
 $docTypeManager = new DocumentTypeManager($database);
 $documentManager = new DocumentManager($database);
+$templateManager = new TemplateManager($database);
 $document_types = $docTypeManager->getAllDocumentTypes(true);
+$templates = $templateManager->getAllTemplates(true);
 
 $message = '';
 $message_type = '';
@@ -97,6 +100,47 @@ renderPageStart('Upload Document');
                 </select>
             </div>
             
+            <!-- Template Selection Section -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Start with Template (Optional)</label>
+                <div style="border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; background: #f8f9fa;">
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <select id="template_filter" style="flex: 1; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;" onchange="filterTemplates()">
+                            <option value="">All Categories</option>
+                            <?php 
+                            $categories = [];
+                            foreach ($templates as $template) {
+                                if ($template['category'] && !in_array($template['category'], $categories)) {
+                                    $categories[] = $template['category'];
+                                }
+                            }
+                            foreach ($categories as $category): ?>
+                                <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <a href="?page=template_gallery" target="_blank" style="padding: 0.5rem 1rem; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">Browse All</a>
+                    </div>
+                    <div id="template_selection" style="max-height: 200px; overflow-y: auto;">
+                        <?php if (empty($templates)): ?>
+                            <p style="text-align: center; color: #6c757d; margin: 1rem 0;">No templates available</p>
+                        <?php else: ?>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.5rem;">
+                                <?php foreach ($templates as $template): ?>
+                                    <div class="template-option" data-category="<?php echo htmlspecialchars($template['category'] ?? ''); ?>" style="border: 1px solid #dee2e6; border-radius: 4px; padding: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="selectTemplate(<?php echo $template['id']; ?>, '<?php echo htmlspecialchars($template['name']); ?>')">
+                                        <div style="font-weight: 500; font-size: 0.9rem; margin-bottom: 0.25rem;"><?php echo htmlspecialchars($template['name']); ?></div>
+                                        <div style="font-size: 0.8rem; color: #6c757d;"><?php echo strtoupper($template['file_type']); ?> - <?php echo htmlspecialchars($template['category'] ?? 'Uncategorized'); ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <div id="selected_template" style="margin-top: 1rem; padding: 0.75rem; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; display: none;">
+                        <strong>Selected Template:</strong> <span id="selected_template_name"></span>
+                        <button type="button" onclick="clearTemplate()" style="float: right; background: none; border: none; color: #721c24; cursor: pointer;">X</button>
+                        <input type="hidden" id="selected_template_id" name="template_id" value="">
+                    </div>
+                </div>
+            </div>
             
             <!-- Dynamic metadata fields will be loaded here -->
             <div id="metadata-fields" style="margin-bottom: 1.5rem;">
@@ -450,8 +494,52 @@ document.addEventListener('DOMContentLoaded', function() {
         originalDisplayMetadataFields(fields);
         // Add listeners to new file inputs
         setTimeout(addFileInputListeners, 100);
-    };
+    }
 });
+
+// Template selection functions
+function filterTemplates() {
+    const filter = document.getElementById('template_filter').value;
+    const templateOptions = document.querySelectorAll('.template-option');
+    
+    templateOptions.forEach(option => {
+        const category = option.getAttribute('data-category');
+        if (!filter || category === filter) {
+            option.style.display = 'block';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+}
+
+function selectTemplate(templateId, templateName) {
+    // Update hidden input
+    document.getElementById('selected_template_id').value = templateId;
+    document.getElementById('selected_template_name').textContent = templateName;
+    
+    // Show selected template section
+    document.getElementById('selected_template').style.display = 'block';
+    
+    // Highlight selected template
+    document.querySelectorAll('.template-option').forEach(option => {
+        option.style.background = '';
+        option.style.borderColor = '#dee2e6';
+    });
+    
+    event.target.closest('.template-option').style.background = '#e7f3ff';
+    event.target.closest('.template-option').style.borderColor = '#007bff';
+}
+
+function clearTemplate() {
+    document.getElementById('selected_template_id').value = '';
+    document.getElementById('selected_template').style.display = 'none';
+    
+    // Remove highlighting
+    document.querySelectorAll('.template-option').forEach(option => {
+        option.style.background = '';
+        option.style.borderColor = '#dee2e6';
+    });
+}
 </script>
 
 <?php renderPageEnd(); ?>

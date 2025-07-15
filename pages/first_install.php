@@ -573,10 +573,24 @@ function updateConfigFile($db_config) {
                     <h4>What's Next:</h4>
                     <ul style="margin: 10px 0; padding-left: 20px;">
                         <li>Database has been created and configured</li>
+                        <li>Template management system initialized</li>
                         <li>Admin user account has been set up</li>
                         <li>System is ready for use</li>
                         <li>You can now log in and start using the system</li>
                     </ul>
+                </div>
+                
+                <div style="background: #e3f2fd; padding: 20px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #2196f3;">
+                    <h4>New Feature: Template Management</h4>
+                    <p style="margin: 10px 0;">Your system now includes a powerful template management feature:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Template Gallery</strong> - Browse and download DOCX, Excel, and PDF templates</li>
+                        <li><strong>Categories</strong> - Organize templates by type (Forms, Letters, Reports, etc.)</li>
+                        <li><strong>Search & Filter</strong> - Find templates quickly with advanced filtering</li>
+                        <li><strong>Analytics</strong> - Track template usage and downloads</li>
+                        <li><strong>Admin Tools</strong> - Upload and manage templates (Admin only)</li>
+                    </ul>
+                    <p style="margin: 10px 0; font-style: italic;">Access these features from the main navigation menu after logging in.</p>
                 </div>
                 
                 <div class="text-center">

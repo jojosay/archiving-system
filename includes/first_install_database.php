@@ -121,10 +121,43 @@ class FirstInstallDatabase {
             $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
             error_log("Tables created: " . implode(', ', $tables));
             
+            // After successful schema import, set up template system
+            $this->setupTemplateSystem($pdo);
+            
             return ['success' => true, 'message' => 'Schema imported successfully. Created ' . count($tables) . ' tables.'];
         } catch (PDOException $e) {
             error_log("Schema import PDO error: " . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Set up template system during first install
+     */
+    private function setupTemplateSystem($pdo) {
+        try {
+            // Include template database setup
+            require_once __DIR__ . '/template_database_setup.php';
+            
+            // Create a mock database object for TemplateDatabaseSetup
+            $mockDatabase = new class($pdo) {
+                private $pdo;
+                public function __construct($pdo) { $this->pdo = $pdo; }
+                public function getConnection() { return $this->pdo; }
+            };
+            
+            $templateSetup = new TemplateDatabaseSetup($mockDatabase);
+            $result = $templateSetup->createTables();
+            
+            if ($result['success']) {
+                error_log("Template system setup completed successfully during first install");
+            } else {
+                error_log("Template system setup failed during first install: " . print_r($result, true));
+            }
+            
+        } catch (Exception $e) {
+            error_log("Error setting up template system during first install: " . $e->getMessage());
+            // Don't fail the entire installation if template setup fails
         }
     }
     

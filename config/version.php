@@ -2,12 +2,12 @@
 // Application Version Configuration
 // Only define if not already defined in config.php
 if (!defined('APP_VERSION')) {
-    define('APP_VERSION', '1.0.3');
+    define('APP_VERSION', '1.0.5');
 }
 if (!defined('APP_NAME')) {
     define('APP_NAME', 'Archiving System');
 }
-define('APP_BUILD', '2025.01.14.003');
+define('APP_BUILD', '2025.01.15.005');
 
 // GitHub Repository Configuration
 define('GITHUB_REPO_OWNER', 'jojosay'); // Replace with your GitHub username
