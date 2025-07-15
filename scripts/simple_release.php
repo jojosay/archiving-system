@@ -4,7 +4,7 @@
  * Creates a ZIP file with all necessary files, excluding unwanted items
  */
 
-$version = '1.0.5';
+$version = '1.0.6';
 $package_name = "archiving-system-v{$version}";
 $output_dir = __DIR__ . '/../releases/';
 $source_dir = __DIR__ . '/../';

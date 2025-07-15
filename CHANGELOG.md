@@ -6,6 +6,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2025-01-15
+### Added
+- **Visual Icon System for Template Categories**
+  - 30+ professional SVG icons locally stored (no CDN dependency)
+  - Categorized icon selection (Business, Documents, Communication, etc.)
+  - Real-time icon preview during selection
+  - IconManager class for efficient SVG handling
+  - Enhanced icon selection interface with visual feedback
+
+- **Responsive Modal Enhancement**
+  - Fixed modal height issues and cut-off problems
+  - Scrollable modal content with sticky header and footer
+  - Mobile-optimized modal design
+  - Improved user experience across all devices
+
+### Enhanced
+- **Template Category Interface**
+  - Visual icons replace text-based icon names
+  - Professional icon grid with hover effects
+  - Organized icon categories for better selection
+  - Enhanced responsive design for mobile devices
+
+- **User Experience Improvements**
+  - Smooth icon selection with visual feedback
+  - Better modal navigation and accessibility
+  - Touch-friendly interface for mobile users
+  - Professional visual design throughout
+
+### Technical
+- **New IconManager Class** - Handles local SVG icon loading and rendering
+- **Enhanced CSS Styling** - Professional icon and modal styles
+- **Improved Template Category Manager** - Integration with visual icon system
+- **Local Asset Management** - All icons stored locally for better performance
+
 ## [1.0.5] - 2025-01-15
 ### Added
 - Version update preparation for next release

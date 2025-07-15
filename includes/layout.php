@@ -216,6 +216,7 @@ function renderPageStart($title = '', $current_page = '') {
     
     <!-- Local Assets -->
     <link rel="stylesheet" href="assets/css/custom/app.css">
+    <link rel="stylesheet" href="assets/css/custom/icons.css">
     <script src="assets/js/app/main.js"></script>
     <script src="assets/js/app/zoom-modal.js"></script>
     

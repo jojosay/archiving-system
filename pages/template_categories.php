@@ -78,7 +78,12 @@ if ($_POST && isset($_POST['action'])) {
 // Get categories with counts
 $categories = $categoryManager->getCategoriesWithCounts();
 $available_icons = $categoryManager->getAvailableIcons();
+$categorized_icons = $categoryManager->getCategorizedIcons();
 $available_colors = $categoryManager->getAvailableColors();
+
+// Include icon manager for rendering icons
+require_once 'includes/icon_manager.php';
+$iconManager = new IconManager();
 
 renderPageStart('Template Categories', 'template_categories');
 ?>
@@ -303,16 +308,21 @@ renderPageStart('Template Categories', 'template_categories');
     height: 100%;
     background-color: rgba(0,0,0,0.5);
     backdrop-filter: blur(4px);
+    overflow-y: auto;
+    padding: 20px 0;
 }
 
 .modal-content {
     background: white;
-    margin: 5% auto;
+    margin: 0 auto;
     padding: 0;
     border-radius: 12px;
     width: 90%;
-    max-width: 500px;
+    max-width: 700px;
+    max-height: calc(100vh - 40px);
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
     animation: modalSlideIn 0.3s ease;
 }
 
@@ -329,6 +339,10 @@ renderPageStart('Template Categories', 'template_categories');
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 1;
 }
 
 .modal-header h3 {
@@ -350,6 +364,9 @@ renderPageStart('Template Categories', 'template_categories');
 
 .modal-body {
     padding: 2rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .form-group {
@@ -469,7 +486,12 @@ renderPageStart('Template Categories', 'template_categories');
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
-    padding-top: 1.5rem;
+    padding: 1.5rem 2rem;
+    margin: 0 -2rem -2rem -2rem;
+    background: white;
+    border-top: 1px solid #e9ecef;
+    border-radius: 0 0 12px 12px;
+    flex-shrink: 0;
     border-top: 1px solid #f1f5f9;
     margin-top: 1.5rem;
 }
@@ -590,8 +612,8 @@ renderPageStart('Template Categories', 'template_categories');
                 <div class="category-card" data-id="<?php echo $category['id']; ?>">
                     <div class="drag-handle">⋮⋮</div>
                     <div class="category-header">
-                        <div class="category-icon" style="background-color: <?php echo htmlspecialchars($category['color']); ?>">
-                            <?php echo htmlspecialchars($category['icon']); ?>
+                        <div class="category-icon" style="background-color: <?php echo htmlspecialchars($category['color']); ?>; --category-color: <?php echo htmlspecialchars($category['color']); ?>">
+                            <?php echo $iconManager->getIcon($category['icon'], 28, 'category-icon-svg'); ?>
                         </div>
                         <div class="category-title"><?php echo htmlspecialchars($category['name']); ?></div>
                         <div class="category-description"><?php echo htmlspecialchars($category['description'] ?: 'No description'); ?></div>
@@ -642,14 +664,27 @@ renderPageStart('Template Categories', 'template_categories');
                 
                 <div class="form-group">
                     <label class="form-label">Icon</label>
-                    <div class="icon-grid">
-                        <?php foreach ($available_icons as $icon => $label): ?>
-                            <div class="icon-option" data-icon="<?php echo $icon; ?>" title="<?php echo $label; ?>">
-                                <?php echo $icon; ?>
+                    <div class="icon-categories">
+                        <?php foreach ($categorized_icons as $category_name => $icons): ?>
+                            <div class="icon-category">
+                                <div class="icon-category-title"><?php echo htmlspecialchars($category_name); ?></div>
+                                <div class="icon-category-grid">
+                                    <?php foreach ($icons as $icon => $label): ?>
+                                        <div class="icon-option" data-icon="<?php echo $icon; ?>" title="<?php echo $label; ?>">
+                                            <?php echo $iconManager->getIcon($icon, 20, 'icon-option-svg'); ?>
+                                            <span><?php echo $label; ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                     <input type="hidden" name="icon" id="selectedIcon" value="folder">
+                    <div class="icon-preview" id="iconPreview" style="display: none;">
+                        <span>Selected: </span>
+                        <span id="iconPreviewContent"></span>
+                        <span id="iconPreviewText"></span>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -729,10 +764,33 @@ function openCreateModal() {
     document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
     
     // Set defaults
-    document.querySelector('[data-icon="folder"]').classList.add('selected');
-    document.querySelector('[data-color="#3498db"]').classList.add('selected');
-    document.getElementById('selectedIcon').value = 'folder';
-    document.getElementById('selectedColor').value = '#3498db';
+    const defaultIcon = document.querySelector('[data-icon="folder"]');
+    const defaultColor = document.querySelector('[data-color="#3498db"]');
+    
+    if (defaultIcon) {
+        defaultIcon.classList.add('selected');
+        document.getElementById('selectedIcon').value = 'folder';
+        
+        // Update preview for default
+        const preview = document.getElementById('iconPreview');
+        const previewContent = document.getElementById('iconPreviewContent');
+        const previewText = document.getElementById('iconPreviewText');
+        
+        if (preview && previewContent && previewText) {
+            const iconSvg = defaultIcon.querySelector('svg').cloneNode(true);
+            const iconLabel = defaultIcon.querySelector('span').textContent;
+            
+            previewContent.innerHTML = '';
+            previewContent.appendChild(iconSvg);
+            previewText.textContent = iconLabel;
+            preview.style.display = 'flex';
+        }
+    }
+    
+    if (defaultColor) {
+        defaultColor.classList.add('selected');
+        document.getElementById('selectedColor').value = '#3498db';
+    }
     
     document.getElementById('categoryModal').style.display = 'block';
 }
@@ -748,8 +806,26 @@ function openEditModal(category) {
     
     // Reset and set icon selection
     document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
-    document.querySelector(`[data-icon="${category.icon}"]`)?.classList.add('selected');
-    document.getElementById('selectedIcon').value = category.icon;
+    const selectedIconElement = document.querySelector(`[data-icon="${category.icon}"]`);
+    if (selectedIconElement) {
+        selectedIconElement.classList.add('selected');
+        document.getElementById('selectedIcon').value = category.icon;
+        
+        // Update preview for edit mode
+        const preview = document.getElementById('iconPreview');
+        const previewContent = document.getElementById('iconPreviewContent');
+        const previewText = document.getElementById('iconPreviewText');
+        
+        if (preview && previewContent && previewText) {
+            const iconSvg = selectedIconElement.querySelector('svg').cloneNode(true);
+            const iconLabel = selectedIconElement.querySelector('span').textContent;
+            
+            previewContent.innerHTML = '';
+            previewContent.appendChild(iconSvg);
+            previewText.textContent = iconLabel;
+            preview.style.display = 'flex';
+        }
+    }
     
     // Reset and set color selection
     document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
@@ -769,6 +845,21 @@ document.querySelectorAll('.icon-option').forEach(option => {
         document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected'));
         this.classList.add('selected');
         document.getElementById('selectedIcon').value = this.dataset.icon;
+        
+        // Update preview
+        const preview = document.getElementById('iconPreview');
+        const previewContent = document.getElementById('iconPreviewContent');
+        const previewText = document.getElementById('iconPreviewText');
+        
+        if (preview && previewContent && previewText) {
+            const iconSvg = this.querySelector('svg').cloneNode(true);
+            const iconLabel = this.querySelector('span').textContent;
+            
+            previewContent.innerHTML = '';
+            previewContent.appendChild(iconSvg);
+            previewText.textContent = iconLabel;
+            preview.style.display = 'flex';
+        }
     });
 });
 

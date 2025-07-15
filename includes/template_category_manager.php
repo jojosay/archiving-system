@@ -229,33 +229,18 @@ class TemplateCategoryManager {
      * Get available icons
      */
     public function getAvailableIcons() {
-        return [
-            'folder' => 'Folder',
-            'file-text' => 'Document',
-            'mail' => 'Mail',
-            'bar-chart' => 'Chart',
-            'award' => 'Award',
-            'grid' => 'Grid',
-            'briefcase' => 'Briefcase',
-            'book' => 'Book',
-            'clipboard' => 'Clipboard',
-            'database' => 'Database',
-            'edit' => 'Edit',
-            'file' => 'File',
-            'home' => 'Home',
-            'image' => 'Image',
-            'layers' => 'Layers',
-            'list' => 'List',
-            'map' => 'Map',
-            'package' => 'Package',
-            'printer' => 'Printer',
-            'settings' => 'Settings',
-            'star' => 'Star',
-            'tag' => 'Tag',
-            'users' => 'Users',
-            'calendar' => 'Calendar',
-            'clock' => 'Clock'
-        ];
+        require_once 'icon_manager.php';
+        $iconManager = new IconManager();
+        return $iconManager->getAvailableIcons();
+    }
+    
+    /**
+     * Get categorized icons for better organization
+     */
+    public function getCategorizedIcons() {
+        require_once 'icon_manager.php';
+        $iconManager = new IconManager();
+        return $iconManager->getCategorizedIcons();
     }
     
     /**
