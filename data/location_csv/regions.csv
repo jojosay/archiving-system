@@ -1,0 +1,18 @@
+﻿id,region_name,region_code
+1,Region I (Ilocos Region),01
+2,Region II (Cagayan Valley),02
+3,Region III (Central Luzon),03
+4,Region IV-A (CALABARZON),04
+5,MIMAROPA,17
+6,Region V (Bicol Region),05
+7,Region VI (Western Visayas),06
+8,Region VII (Central Visayas),07
+9,Region VIII (Eastern Visayas),08
+10,Region IX (Zamboanga Peninzula),09
+11,Region X (Northern Mindanao),10
+12,Region XI (Davao Region),11
+13,Region XII (SOCCSKSARGEN),12
+14,National Capital Region (NCR),13
+15,Cordillera Administrative Region (CAR),14
+16,Autonomous Region in Muslim Mindanao (ARMM),15
+17,Region XIII (Caraga),16

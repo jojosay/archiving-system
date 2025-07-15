@@ -1,71 +1,33 @@
-# Archiving System - Git Ignore File
-
-# User Data and Uploads
-data/
-storage/documents/
-storage/uploads/
-backups/
-
-# Logs
+# Temporary files
+tmp_*
+*.tmp
 *.log
 php_error_log
-error_log
-error_log.md
 
-# Temporary Files
-tmp_*
-temp/
-cache/
-acli.exe
+# Backup directories
+storage_backup_*/
 
-# Environment and Local Config
-.env
-.env.local
-config/local.php
-
-# IDE and Editor Files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS Generated Files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Composer (if used)
-vendor/
-composer.lock
-
-# Node.js (if used)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Release Packages
+# Build and release files
 releases/
-*.zip
-*.tar.gz
+deployment/packages/*/
 
-# Database Dumps
-*.sql
-*.db
-*.sqlite
+# System files
+Thumbs.db
+.DS_Store
+desktop.ini
 
-# Sensitive Files
-*.key
-*.pem
-*.p12
-*.pfx
+# Cache files
+data/cache/
+data/*.log
+data/*.tmp
 
-# Local Development
-local/
-dev/
-test_*
+# Development files
+*_SUMMARY.md
+*_IMPLEMENTATION_SUMMARY.md
+*_FEATURE_PLAN.md
+ICON_UPGRADE_GUIDE.md
+FEATHER_ICONS_IMPLEMENTATION.md
+FEATHER_ICONS_LOCAL_SETUP.md
+ICON_INTEGRATION_COMPLETE.md
+MODAL_ENHANCEMENT_SUMMARY.md
+RELEASE_INSTRUCTIONS_v*.md
