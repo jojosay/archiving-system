@@ -30,6 +30,10 @@ try {
     }
     require_once '../includes/auth.php';
 
+    // Increase execution time and memory limit for large uploads
+    set_time_limit(300); // 5 minutes
+    ini_set('memory_limit', '512M');
+
     // Start session only if not already started
     if (session_status() === PHP_SESSION_NONE) {
         session_start();

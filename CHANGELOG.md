@@ -6,6 +6,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2025-01-14
+### Added
+- Enhanced Reports feature with 6 new report types
+- Recent Activity Summary (Last 30 Days) with key metrics
+- Storage Usage Analytics by document type
+- Upload Trends by Day of Week analysis
+- File Size Analytics with min/max/average calculations
+- Document Statistics by Location (geographic distribution)
+- Document Archive Report with comprehensive export
+- System Audit Log with activity tracking
+- Custom Report Builder with dynamic filtering
+- Dual export formats (CSV and JSON) for all reports
+- Debug mode for troubleshooting report generation
+
+### Enhanced
+- Quick Report Actions with fully functional buttons
+- Professional UI/UX with color-coded export buttons
+- Advanced filtering options in Custom Report Builder
+- Comprehensive error handling and logging
+- Performance-optimized database queries
+
+### Fixed
+- Generate Report button now works correctly
+- CSV export issues resolved with proper headers
+- Empty data handling with meaningful fallbacks
+- Output buffer conflicts in export functions
+
+### Technical
+- Added 6 new methods to ReportManager class
+- Enhanced CSV export with UTF-8 BOM support
+- Improved error logging and debugging capabilities
+- Added comprehensive documentation for new features
+
 ## [1.0.1] - 2025-01-14
 ### Added
 - GitHub-based application update system
