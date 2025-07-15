@@ -8,7 +8,7 @@
 define('BRAND_APP_NAME', 'Archiving System');
 define('BRAND_APP_DESCRIPTION', 'Secure document archiving and management system');
 define('BRAND_APP_TAGLINE', 'Efficient • Secure • Reliable');
-define('BRAND_APP_VERSION', '1.0.0');
+define('BRAND_APP_VERSION', '1.0.3');
 
 // Office Information
 define('BRAND_OFFICE_NAME', 'Civil Registry Office');
@@ -50,7 +50,7 @@ define('BRAND_FONT_FAMILY', "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif");
 // Deployment Information
 define('BRAND_DEPLOYMENT_ID', 'default');
 define('BRAND_DEPLOYMENT_DATE', date('Y-m-d'));
-define('BRAND_DEPLOYMENT_VERSION', '1.0.0');
+define('BRAND_DEPLOYMENT_VERSION', '1.0.3');
 
 // Feature Flags
 define('BRAND_SHOW_LOGO', true);

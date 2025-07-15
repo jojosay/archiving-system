@@ -39,12 +39,14 @@ Bug Fixes:
 - Resolved CSV export issues with proper headers
 - Added empty data handling with meaningful fallbacks
 - Fixed output buffer conflicts in export functions
+- Fixed About page version display to use dynamic version from config
 
 Technical Improvements:
 - Added 6 new methods to ReportManager class
 - Enhanced CSV export with UTF-8 BOM support
 - Improved error logging and debugging capabilities
 - Added comprehensive documentation for new features
+- Updated version references across branding configuration files
 
 Version: 1.0.3
 Build: 2025.01.14.003

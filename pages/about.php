@@ -4,6 +4,7 @@
 
 require_once 'includes/layout.php';
 require_once 'includes/branding_manager.php';
+require_once 'config/version.php';
 
 // Get branding information
 $branding_manager = new BrandingManager();
@@ -14,9 +15,9 @@ $app_info = [
     'name' => $branding['app_name'],
     'description' => !empty($branding['app_description']) ? $branding['app_description'] : 'A comprehensive offline archiving system for civil registry documents with modern deployment capabilities.',
     'tagline' => $branding['app_tagline'],
-    'version' => '1.0.0',
-    'build_date' => !empty($branding['deployment_date']) ? $branding['deployment_date'] : '2025-01-13',
-    'deployment_version' => !empty($branding['deployment_version']) ? $branding['deployment_version'] : '1.0.0',
+    'version' => defined('APP_VERSION') ? APP_VERSION : '1.0.3',
+    'build_date' => !empty($branding['deployment_date']) ? $branding['deployment_date'] : '2025-01-14',
+    'deployment_version' => !empty($branding['deployment_version']) ? $branding['deployment_version'] : (defined('APP_VERSION') ? APP_VERSION : '1.0.3'),
     'deployment_id' => !empty($branding['deployment_id']) ? $branding['deployment_id'] : 'N/A',
     'php_version' => phpversion(),
     'developer' => !empty($branding['developer_name']) ? $branding['developer_name'] : 'Jose John S. Saycon'

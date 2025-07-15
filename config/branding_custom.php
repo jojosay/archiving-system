@@ -39,5 +39,5 @@ define('BRAND_SHOW_OFFICE_INFO', false);
 // Deployment Information
 define('BRAND_DEPLOYMENT_ID', 'deploy_6873491c7edcd');
 define('BRAND_DEPLOYMENT_DATE', '2025-07-13');
-define('BRAND_DEPLOYMENT_VERSION', '1.0.0');
+define('BRAND_DEPLOYMENT_VERSION', '1.0.3');
 ?>
