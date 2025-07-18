@@ -3,7 +3,6 @@ require_once 'includes/layout.php';
 require_once 'includes/document_manager.php';
 require_once 'includes/document_type_manager.php';
 
-
 $database = new Database();
 $documentManager = new DocumentManager($database);
 $docTypeManager = new DocumentTypeManager($database);
@@ -83,20 +82,22 @@ renderPageStart('Edit Document');
                         $field_type = $field['field_type'];
                         $is_required = $field['is_required'];
                         $field_options = $field['field_options'];
-                        $current_value = $document['metadata'][$field_name]['value'] ?? '';
-
+                        
+                        // Get current value from document metadata
+                        $current_value = '';
+                        if (isset($document['metadata'][$field_name])) {
+                            $current_value = $document['metadata'][$field_name]['value'] ?? '';
+                        }
+                        
                         $requiredAttr = $is_required ? 'required' : '';
-                        $requiredMark = $is_required ? ' <span style="color: red;">*</span>' : '';
-
-                        echo '<div style="margin-bottom: 1rem;">';
-                        echo '<label for="metadata_' . $field_name . '" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">' . $field_label . $requiredMark . '</label>';
+                        $requiredMark = $is_required ? ' *' : '';
+                        
+                        echo '<div style="margin-bottom: 1.5rem;">';
+                        echo '<label for="metadata_' . $field_name . '" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">' . htmlspecialchars($field_label) . $requiredMark . '</label>';
                         
                         switch ($field_type) {
                             case 'text':
-                            case 'number':
-                            case 'date':
-                            case 'time':
-                                echo '<input type="' . $field_type . '" id="metadata_' . $field_name . '" name="metadata[' . $field_name . ']" ' . $requiredAttr . ' style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;" value="' . htmlspecialchars($current_value) . '">';
+                                echo '<input type="text" id="metadata_' . $field_name . '" name="metadata[' . $field_name . ']" ' . $requiredAttr . ' style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;" value="' . htmlspecialchars($current_value) . '">';
                                 break;
                                 
                             case 'textarea':
@@ -121,8 +122,37 @@ renderPageStart('Edit Document');
                                 break;
                                 
                             case 'cascading_dropdown':
-                                // Render the cascading dropdown HTML
+                                // Show current value display - check for separate address fields
+                                $display_location = '';
+                                if (!empty($current_value)) {
+                                    $display_location = formatCascadingDropdownValue($current_value);
+                                } else if (strpos($field_name, 'address') !== false) {
+                                    // Try to get from separate address fields
+                                    $region_value = $document['metadata']['address_region']['value'] ?? '';
+                                    $province_value = $document['metadata']['address_province']['value'] ?? '';
+                                    $citymun_value = $document['metadata']['address_citymun']['value'] ?? '';
+                                    $barangay_value = $document['metadata']['address_barangay']['value'] ?? '';
+                                    
+                                    if (!empty($region_value) || !empty($province_value) || !empty($citymun_value) || !empty($barangay_value)) {
+                                        $display_location = "Region: $region_value | Province: $province_value | City/Municipality: $citymun_value | Barangay: $barangay_value";
+                                    }
+                                }
+                                
+                                if (!empty($display_location)) {
+                                    echo '<div style="background: #e8f5e8; border: 2px solid #28a745; border-radius: 8px; padding: 0.75rem; margin-bottom: 1rem;">';
+                                    echo '<div style="font-weight: 500; color: #155724; margin-bottom: 0.25rem;">Current Location:</div>';
+                                    echo '<div style="color: #155724;">' . htmlspecialchars($display_location) . '</div>';
+                                    echo '<div style="font-size: 0.8rem; color: #6c757d; margin-top: 0.5rem;">Note: These are location codes. Use the dropdowns below to change the selection.</div>';
+                                    echo '</div>';
+                                }
+                                
+                                // Always render the cascading dropdown HTML
                                 echo generateCascadingDropdownHTML($field_name, $requiredAttr, $current_value);
+                                // Mark location fields for special initialization
+                                if (strpos($field_name, 'address') !== false && !empty($current_value) && $current_value[0] !== '{') {
+                                    echo '<script>window.locationFieldsToResolve = window.locationFieldsToResolve || []; window.locationFieldsToResolve.push({field: "' . $field_name . '", value: "' . htmlspecialchars($current_value) . '"});</script>';
+                                    echo '<script>console.log("Marked location field for resolution:", "' . $field_name . '", "' . htmlspecialchars($current_value) . '");</script>';
+                                }
                                 break;
                                 
                             case 'reference':
@@ -150,7 +180,7 @@ renderPageStart('Edit Document');
                                 }
                                 echo '</div>';
                                 echo '<button type="button" class="select-reference-btn" data-field-id="metadata_' . $field_name . '" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">Select Image</button>';
-                                                                echo "<button type=\"button\" onclick=\"clearReferenceSelection('" . addslashes($field_name) . "')\" style=\"padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;\">Clear</button>";
+                                echo "<button type=\"button\" onclick=\"clearReferenceSelection('" . addslashes($field_name) . "')\" style=\"padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;\">Clear</button>";
                                 break;
 
                             case 'file':
@@ -200,160 +230,85 @@ renderPageStart('Edit Document');
 <script>
     // Pass document metadata to JavaScript
     const documentMetadata = <?php echo json_encode($document['metadata'] ?? []); ?>;
-    console.log('Document metadata:', documentMetadata);
 
     <?php
 function generateCascadingDropdownHTML($fieldName, $requiredAttr, $currentValue = '') {
-    $levels = ['regions', 'provinces', 'citymun', 'barangays'];
+    $levels = ['region', 'province', 'citymun', 'barangay'];
     $labels = ['Region', 'Province', 'City/Municipality', 'Barangay'];
     
     $html = '';
     foreach ($levels as $index => $level) {
         $label = $labels[$index];
         $selectId = "metadata_{$fieldName}_{$level}";
+        $disabled = $index > 0 ? 'disabled' : '';
         $html .= "
             <div style=\"margin-bottom: 0.5rem;\">
                 <label for=\"$selectId\" style=\"font-size: 0.9rem; color: #6C757D; margin-bottom: 0.25rem; display: block;\">{$label}</label>
-                <select id=\"$selectId\" class=\"cascading-dropdown\" style=\"width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 0.5rem;\">
+                <select id=\"$selectId\" class=\"cascading-dropdown\" style=\"width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 0.5rem;\" {$disabled}>
                     <option value=\"\">Select {$label}</option>
                 </select>
             </div>
         ";
     }
-    $html .= "<input type=\"hidden\" id=\"metadata_{$fieldName}_data\" name=\"metadata[{$fieldName}]\" value=\"" . htmlspecialchars($currentValue) . "\" {$requiredAttr}>";
+    $html .= "<input type=\"hidden\" id=\"metadata_{$fieldName}\" name=\"metadata[{$fieldName}]\" value=\"" . htmlspecialchars($currentValue) . "\" {$requiredAttr}>";
     return $html;
+}
+
+function formatCascadingDropdownValue($value) {
+    if (!$value) return 'N/A';
+    
+    try {
+        // If it's already a string that looks formatted, return it
+        if (is_string($value) && substr($value, 0, 1) !== '{') {
+            return $value;
+        }
+        
+        // Parse JSON if it's a string
+        $data = is_string($value) ? json_decode($value, true) : $value;
+        
+        if (!$data) return $value; // Return original if parsing fails
+        
+        // Extract the text values in hierarchical order
+        $parts = [];
+        if (isset($data['regions']['text'])) $parts[] = $data['regions']['text'];
+        if (isset($data['provinces']['text'])) $parts[] = $data['provinces']['text'];
+        if (isset($data['citymun']['text'])) $parts[] = $data['citymun']['text'];
+        if (isset($data['barangays']['text'])) $parts[] = $data['barangays']['text'];
+        
+        // Also check for singular forms
+        if (isset($data['region']['text'])) $parts[] = $data['region']['text'];
+        if (isset($data['province']['text'])) $parts[] = $data['province']['text'];
+        if (isset($data['barangay']['text'])) $parts[] = $data['barangay']['text'];
+        
+        return count($parts) > 0 ? implode(' > ', $parts) : $value;
+    } catch (Exception $e) {
+        // If parsing fails, return the original value
+        return $value;
+    }
 }
 ?>
 
-    // Function to initialize cascading dropdown (copied from document_upload.php)
-    function initializeCascadingDropdown(fieldName, initialValue) {
-        const levels = ['regions', 'provinces', 'citymun', 'barangays'];
-        const fullFieldName = `metadata_${fieldName}`;
-        
-        console.log(`Initializing cascading dropdown: ${fieldName} with value:`, initialValue);
-        
-        setTimeout(() => {
-            if (typeof initCascadingDropdown === 'function') {
-                // Set the hidden input value first
-                const hiddenInput = document.getElementById(`${fullFieldName}_data`);
-                if (hiddenInput && initialValue) {
-                    hiddenInput.value = initialValue;
-                }
-                
-                initCascadingDropdown(fullFieldName, levels, initialValue);
-            } else {
-                console.error('initCascadingDropdown function not found');
-            }
-        }, 500); // Increased timeout to ensure DOM is ready
-    }
-
-    // Function to initialize reference field (copied from document_upload.php)
-    function initializeReferenceField(fieldName) {
-        const button = document.querySelector(`[data-field-id="metadata_${fieldName}"]`);
-        if (button) {
-            button.addEventListener('click', function() {
-                openReferenceSelector(`metadata_${fieldName}`);
-            });
-        }
-    }
-
-    // Function to clear reference selection (copied from reference_selector.js)
-    function clearReferenceSelection(fieldName) {
-        console.log('Clearing reference selection for field:', fieldName);
-        const hiddenInput = document.getElementById(`metadata_${fieldName}`);
-        if (hiddenInput) {
-            hiddenInput.value = '';
-        }
-        const displayArea = document.getElementById(`metadata_${fieldName}_display`);
-        if (displayArea) {
-            displayArea.innerHTML = '<div style="color: #6c757d; text-align: center; padding: 1rem; border: 1px dashed #ddd; border-radius: 4px;">No image selected</div>';
-        }
-        console.log('Reference selection cleared for field:', fieldName);
+    // File handling functions
+    function selectDocument(fieldName) {
+        document.getElementById('metadata_' + fieldName).click();
     }
 
     function clearFileSelection(fieldName) {
-        console.log('Clearing file selection for field:', fieldName);
         const fileInput = document.getElementById(`metadata_${fieldName}`);
         if (fileInput) {
-            fileInput.value = ''; // Clear the file input
+            fileInput.value = '';
         }
         const clearFileHiddenInput = document.getElementById(`metadata_${fieldName}_clear_file`);
         if (clearFileHiddenInput) {
-            clearFileHiddenInput.value = '1'; // Signal to backend to clear the file
+            clearFileHiddenInput.value = '1';
         }
-        const currentFileDisplay = document.getElementById(`metadata_${fieldName}_current_file`);
-        if (currentFileDisplay) {
-            currentFileDisplay.innerHTML = 'No file selected';
+        const display = document.getElementById(`metadata_${fieldName}_display`);
+        if (display) {
+            display.innerHTML = '<div id="metadata_' + fieldName + '_placeholder" style="color: #6c757d; text-align: center; padding: 1rem;">No file selected</div>';
         }
-        console.log('File selection cleared for field:', fieldName);
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize dynamic fields based on document's current metadata
-        const documentMetadata = <?php echo json_encode($document['metadata'] ?? []); ?>;
-        const documentTypeId = <?php echo $document['document_type_id'] ?? 0; ?>;
-
-        if (documentTypeId > 0) {
-            fetch(`api/document_type_fields.php?type_id=${documentTypeId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.fields) {
-                        data.fields.forEach(field => {
-                            const fieldName = field.field_name;
-                            const fieldType = field.field_type;
-                            const fieldLabel = field.field_label;
-                            
-                            // Get current value from document metadata
-                            let currentValue = '';
-                            if (documentMetadata[fieldName]) {
-                                currentValue = documentMetadata[fieldName].value || '';
-                            }
-                            
-                            console.log(`Initializing field: ${fieldName}, type: ${fieldType}, value:`, currentValue);
-
-                            if (fieldType === 'cascading_dropdown') {
-                                initializeCascadingDropdown(fieldName, currentValue);
-                            } else if (fieldType === 'reference') {
-                                initializeReferenceField(fieldName);
-                            }
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching document type fields:', error);
-                });
-        }
-    });
-
-    // File handling functions
-    window.selectDocument = function(fieldName) {
-        const fileInput = document.getElementById('metadata_' + fieldName);
-        fileInput.click();
-    };
-
-    window.clearFileSelection = function(fieldName) {
-        const fileInput = document.getElementById('metadata_' + fieldName);
-        const display = document.getElementById('metadata_' + fieldName + '_display');
-        const clearFlag = document.getElementById('metadata_' + fieldName + '_clear_file');
-        
-        // Clear the file input
-        fileInput.value = '';
-        
-        // Set clear flag for existing files
-        if (clearFlag) {
-            clearFlag.value = '1';
-        }
-        
-        // Update display
-        display.innerHTML = '<div id="metadata_' + fieldName + '_placeholder" style="color: #6c757d; text-align: center; padding: 1rem;">No file selected</div>';
-        
-        // Update buttons - hide preview button
-        const previewBtn = document.querySelector(`button[onclick*="previewDocument('${fieldName}'"]`);
-        if (previewBtn) {
-            previewBtn.style.display = 'none';
-        }
-    };
-
+    // Fixed previewDocument function
     window.previewDocument = function(fieldName, filePath) {
         if (!filePath) {
             const fileInput = document.getElementById('metadata_' + fieldName);
@@ -368,11 +323,13 @@ function generateCascadingDropdownHTML($fieldName, $requiredAttr, $currentValue 
         } else {
             // Preview existing file through secure endpoint
             const fileURL = 'api/serve_file.php?file=' + encodeURIComponent(filePath);
-            openPreviewWindow(fileURL, filePath.split('/').pop());
+            const fileName = filePath.split('/').pop();
+            openPreviewWindow(fileURL, fileName, filePath);
         }
     };
 
-    function openPreviewWindow(fileURL, fileName) {
+    // Fixed openPreviewWindow function
+    function openPreviewWindow(fileURL, fileName, fullFilePath = null) {
         const fileExtension = fileName.split('.').pop().toLowerCase();
         
         if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
@@ -399,32 +356,100 @@ function generateCascadingDropdownHTML($fieldName, $requiredAttr, $currentValue 
                 </html>
             `);
         } else if (['pdf'].includes(fileExtension)) {
-            // PDF preview with error handling
-            const previewWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
-            previewWindow.document.write(`
-                <html>
-                    <head><title>Preview: ${fileName}</title></head>
-                    <body style="margin: 0; padding: 20px;">
-                        <h3>${fileName}</h3>
-                        <div id="pdfContainer">
-                            <iframe src="${fileURL}" width="100%" height="600px" style="border: 1px solid #ddd;"
-                                    onload="document.getElementById('pdfErrorMsg').style.display='none';"
-                                    onerror="document.getElementById('pdfErrorMsg').style.display='block';">
-                            </iframe>
-                            <div id="pdfErrorMsg" style="display: none; color: #dc3545; padding: 2rem; border: 1px solid #dc3545; border-radius: 4px; background: #f8d7da; margin-top: 1rem;">
-                                <h4>Unable to preview PDF</h4>
-                                <p>The file may not exist or your browser may not support PDF preview.</p>
-                                <p><strong>File URL:</strong> ${fileURL}</p>
-                                <button onclick="window.location.href='${fileURL}'" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Try Direct Download</button>
-                            </div>
-                        </div>
-                    </body>
-                </html>
-            `);
+            // Use enhanced PDF.js viewer with the full file path - THIS IS THE KEY FIX
+            const fileParam = fullFilePath || fileName;
+            const pdfViewerUrl = `${BASE_URL}index.php?page=pdf_viewer&file=${encodeURIComponent(fileParam)}&title=${encodeURIComponent(fileName)}`;
+            window.open(pdfViewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            return;
         } else {
             // For other file types, try to open directly
             window.open(fileURL, '_blank');
         }
+    }
+
+    // Function to clear reference selection
+    function clearReferenceSelection(fieldName) {
+        const hiddenInput = document.getElementById(`metadata_${fieldName}`);
+        if (hiddenInput) {
+            hiddenInput.value = '';
+        }
+        const displayArea = document.getElementById(`metadata_${fieldName}_display`);
+        if (displayArea) {
+            displayArea.innerHTML = '<div style="color: #6c757d; text-align: center; padding: 1rem; border: 1px dashed #ddd; border-radius: 4px;">No image selected</div>';
+        }
+    }
+
+    // Function to initialize cascading dropdown
+    function initializeCascadingDropdown(fieldName, initialValue) {
+        const levels = ['region', 'province', 'citymun', 'barangay'];
+        const fullFieldName = `metadata_${fieldName}`;
+        
+        setTimeout(() => {
+            if (typeof initCascadingDropdown === 'function') {
+                const hiddenInput = document.getElementById(fullFieldName);
+                if (hiddenInput && initialValue) {
+                    hiddenInput.value = initialValue;
+                }
+                
+                let parsedInitialValue = null;
+                if (initialValue) {
+                    try {
+                        if (typeof initialValue === 'string') {
+                            parsedInitialValue = JSON.parse(initialValue);
+                        } else {
+                            parsedInitialValue = initialValue;
+                        }
+                    } catch (e) {
+                        parsedInitialValue = null;
+                    }
+                }
+                
+                initCascadingDropdown(fullFieldName, levels, parsedInitialValue);
+            }
+        }, 500);
+    }
+
+    // Function to initialize reference field
+    function initializeReferenceField(fieldName) {
+        const button = document.querySelector(`[data-field-id="metadata_${fieldName}"]`);
+        if (button) {
+            button.addEventListener('click', function() {
+                openReferenceSelector(`metadata_${fieldName}`);
+            });
+        }
+    }
+
+    // Function to initialize cascading dropdown with separate address values
+    function initializeCascadingDropdownWithSeparateValues(fieldName, values) {
+        const levels = ['region', 'province', 'citymun', 'barangay'];
+        const fullFieldName = `metadata_${fieldName}`;
+        
+        setTimeout(() => {
+            if (typeof initCascadingDropdown === 'function') {
+                const dropdown = initCascadingDropdown(fullFieldName, levels, null);
+                
+                setTimeout(async () => {
+                    try {
+                        if (values.region) {
+                            await dropdown.setValueByCode('region', values.region);
+                        }
+                        if (values.province) {
+                            await dropdown.setValueByCode('province', values.province);
+                        }
+                        if (values.citymun) {
+                            await dropdown.setValueByCode('citymun', values.citymun);
+                        }
+                        if (values.barangay) {
+                            await dropdown.setValueByCode('barangay', values.barangay);
+                        }
+                        
+                        dropdown.updateHiddenField();
+                    } catch (error) {
+                        // Silent error handling
+                    }
+                }, 1500);
+            }
+        }, 500);
     }
 
     // Add event listeners for file inputs
@@ -461,6 +486,51 @@ function generateCascadingDropdownHTML($fieldName, $requiredAttr, $currentValue 
             }
         });
     });
+
+    // Initialize fields on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize dynamic fields based on document's current metadata
+        const documentMetadata = <?php echo json_encode($document['metadata'] ?? []); ?>;
+        const documentTypeId = <?php echo $document['document_type_id'] ?? 0; ?>;
+
+        // Initialize cascading dropdown fields
+        <?php
+        foreach ($document_type_fields as $field) {
+            if ($field['field_type'] === 'cascading_dropdown') {
+                $current_value = '';
+                if (isset($document['metadata'][$field['field_name']])) {
+                    $current_value = $document['metadata'][$field['field_name']]['value'] ?? '';
+                }
+                
+                // Check if this is an address field and we have separate address components
+                if (strpos($field['field_name'], 'address') !== false && empty($current_value)) {
+                    $region_value = $document['metadata']['address_region']['value'] ?? '';
+                    $province_value = $document['metadata']['address_province']['value'] ?? '';
+                    $citymun_value = $document['metadata']['address_citymun']['value'] ?? '';
+                    $barangay_value = $document['metadata']['address_barangay']['value'] ?? '';
+                    
+                    if (!empty($region_value) || !empty($province_value) || !empty($citymun_value) || !empty($barangay_value)) {
+                        echo "initializeCascadingDropdownWithSeparateValues('" . $field['field_name'] . "', {\n";
+                        echo "    region: '" . addslashes($region_value) . "',\n";
+                        echo "    province: '" . addslashes($province_value) . "',\n";
+                        echo "    citymun: '" . addslashes($citymun_value) . "',\n";
+                        echo "    barangay: '" . addslashes($barangay_value) . "'\n";
+                        echo "});\n";
+                    } else {
+                        echo "initializeCascadingDropdown('" . $field['field_name'] . "', '');\n";
+                    }
+                } else {
+                    echo "initializeCascadingDropdown('" . $field['field_name'] . "', '" . addslashes($current_value) . "');\n";
+                }
+            }
+            if ($field['field_type'] === 'reference') {
+                echo "initializeReferenceField('" . $field['field_name'] . "');\n";
+            }
+        }
+        ?>
+    });
 </script>
+
+<!-- JavaScript files are already included in layout.php -->
 
 <?php renderPageEnd(); ?>

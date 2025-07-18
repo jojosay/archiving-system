@@ -5,6 +5,7 @@
  */
 
 require_once 'document_storage_manager.php';
+require_once 'document_type_manager.php';
 
 class DocumentManager {
     private $db;
@@ -139,7 +140,7 @@ class DocumentManager {
                 WHERE d.id = ?
             ");
             $stmt->execute([$document_id]);
-            $document = $stmt->fetch();
+            $document = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($document) {
                 $document['metadata'] = $this->getDocumentMetadata($document_id);
@@ -147,6 +148,7 @@ class DocumentManager {
 
             return $document;
         } catch (Exception $e) {
+            error_log("Error in getDocumentById: " . $e->getMessage());
             return null;
         }
     }
@@ -157,7 +159,16 @@ class DocumentManager {
     public function getDocumentMetadata($document_id) {
         try {
             $stmt = $this->db->prepare("
-                SELECT dm.field_name, dm.field_value, dtf.field_label, dtf.field_type, bi.file_path as book_image_path
+                SELECT 
+                    dm.field_name, 
+                    dm.field_value, 
+                    dm.location_name,
+                    dtf.field_label, 
+                    dtf.field_type,
+                    bi.file_path as book_image_path,
+                    bi.book_title,
+                    bi.page_number,
+                    bi.description as book_description
                 FROM document_metadata dm
                 LEFT JOIN documents d ON dm.document_id = d.id
                 LEFT JOIN document_type_fields dtf ON d.document_type_id = dtf.document_type_id AND dm.field_name = dtf.field_name
@@ -166,17 +177,42 @@ class DocumentManager {
             ");
             $stmt->execute([$document_id]);
             $metadata = [];
-            while ($row = $stmt->fetch()) {
-                $label = $row['field_name'];
-                $metadata[$label] = [
-                    'value' => $row['field_value'],
-                    'type' => $row['field_type'],
-                    'label' => $row['field_label'],
-                    'book_image_path' => $row['book_image_path'] ?? null
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $value = $row['field_value'];
+                $type = $row['field_type'];
+
+                if ($type === 'cascading_dropdown' && !empty($row['location_name'])) {
+                    $value = $row['location_name'];
+                } elseif ($type === 'cascading_dropdown' && !empty($value)) {
+                    try {
+                        $data = json_decode($value, true);
+                        $parts = [];
+                        if (isset($data['regions']['text'])) $parts[] = $data['regions']['text'];
+                        if (isset($data['provinces']['text'])) $parts[] = $data['provinces']['text'];
+                        if (isset($data['citymun']['text'])) $parts[] = $data['citymun']['text'];
+                        if (isset($data['barangays']['text'])) $parts[] = $data['barangays']['text'];
+                        
+                        if (!empty($parts)) {
+                            $value = implode(' > ', $parts);
+                        }
+                    } catch (Exception $e) {
+                        // Fallback to raw value if JSON parsing fails
+                    }
+                }
+
+                $metadata[$row['field_name']] = [
+                    'value' => $value,
+                    'type' => $type,
+                    'label' => $row['field_label'] ?? $row['field_name'],
+                    'book_image_path' => $row['book_image_path'] ?? null,
+                    'book_title' => $row['book_title'] ?? null,
+                    'page_number' => $row['page_number'] ?? null,
+                    'book_description' => $row['book_description'] ?? null
                 ];
             }
             return $metadata;
         } catch (Exception $e) {
+            error_log("Error in getDocumentMetadata: " . $e->getMessage());
             return [];
         }
     }
@@ -238,6 +274,90 @@ class DocumentManager {
             
         } catch (Exception $e) {
             throw new Exception("Error searching documents: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Advanced search documents with enhanced filtering and pagination
+     */
+    public function searchDocumentsAdvanced($search_query = '', $document_type_filter = '', 
+                                          $location_filter = '', $date_from = '', $date_to = '', 
+                                          $custom_fields = [], $limit = 50, $offset = 0) {
+        try {
+            $sql = "
+                SELECT DISTINCT d.*, dt.name as document_type_name, u.username as uploaded_by_username,
+                       COUNT(dm.field_name) as field_count
+                FROM documents d
+                LEFT JOIN document_types dt ON d.document_type_id = dt.id
+                LEFT JOIN users u ON d.uploaded_by = u.id
+                LEFT JOIN document_metadata dm ON d.id = dm.document_id
+                WHERE 1=1
+            ";
+            
+            $params = [];
+            
+            // Search in title and metadata
+            if (!empty($search_query)) {
+                $sql .= " AND (d.title LIKE ? OR dm.field_value LIKE ? OR dm.location_name LIKE ?)";
+                $search_param = '%' . $search_query . '%';
+                $params[] = $search_param;
+                $params[] = $search_param;
+                $params[] = $search_param;
+            }
+            
+            // Filter by document type
+            if (!empty($document_type_filter)) {
+                $sql .= " AND d.document_type_id = ?";
+                $params[] = $document_type_filter;
+            }
+            
+            // Filter by location (search in metadata and location_name)
+            if (!empty($location_filter)) {
+                $sql .= " AND (dm.field_value LIKE ? OR dm.location_name LIKE ?)";
+                $location_param = '%' . $location_filter . '%';
+                $params[] = $location_param;
+                $params[] = $location_param;
+            }
+            
+            // Filter by date range
+            if (!empty($date_from)) {
+                $sql .= " AND DATE(d.created_at) >= ?";
+                $params[] = $date_from;
+            }
+            
+            if (!empty($date_to)) {
+                $sql .= " AND DATE(d.created_at) <= ?";
+                $params[] = $date_to;
+            }
+            
+            // Filter by custom fields
+            if (!empty($custom_fields) && is_array($custom_fields)) {
+                foreach ($custom_fields as $field_name => $field_value) {
+                    if (!empty($field_value)) {
+                        $sql .= " AND EXISTS (
+                            SELECT 1 FROM document_metadata dm2 
+                            WHERE dm2.document_id = d.id 
+                            AND dm2.field_name = ? 
+                            AND (dm2.field_value LIKE ? OR dm2.location_name LIKE ?)
+                        )";
+                        $params[] = $field_name;
+                        $params[] = '%' . $field_value . '%';
+                        $params[] = '%' . $field_value . '%';
+                    }
+                }
+            }
+            
+            $sql .= " GROUP BY d.id ORDER BY d.created_at DESC LIMIT ? OFFSET ?";
+            $params[] = $limit;
+            $params[] = $offset;
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+        } catch (Exception $e) {
+            throw new Exception("Error in advanced document search: " . $e->getMessage());
         }
     }
 
@@ -446,10 +566,22 @@ class DocumentManager {
         $stmt->execute([$document_id]);
 
         // Insert all metadata (existing preserved + new/updated)
-        $stmt = $this->db->prepare("INSERT INTO document_metadata (document_id, field_name, field_value) VALUES (?, ?, ?)");
+        $stmt = $this->db->prepare("INSERT INTO document_metadata (document_id, field_name, field_value, location_name) VALUES (?, ?, ?, ?)");
         foreach ($metadata as $field_name => $field_value) {
             if (!empty($field_value)) {
-                $stmt->execute([$document_id, $field_name, $field_value]);
+                $location_name = null;
+                if (is_string($field_value) && is_array(json_decode($field_value, true))) {
+                    $decoded_value = json_decode($field_value, true);
+                    $parts = [];
+                    if (isset($decoded_value['regions']['text'])) $parts[] = $decoded_value['regions']['text'];
+                    if (isset($decoded_value['provinces']['text'])) $parts[] = $decoded_value['provinces']['text'];
+                    if (isset($decoded_value['citymun']['text'])) $parts[] = $decoded_value['citymun']['text'];
+                    if (isset($decoded_value['barangays']['text'])) $parts[] = $decoded_value['barangays']['text'];
+                    if (!empty($parts)) {
+                        $location_name = implode(' > ', $parts);
+                    }
+                }
+                $stmt->execute([$document_id, $field_name, $field_value, $location_name]);
             }
         }
     }

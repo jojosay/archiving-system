@@ -534,7 +534,24 @@ function showCompletionButtons() {
  * Cancel operation (placeholder)
  */
 function cancelOperation() {
-    // TODO: Implement operation cancellation
+    // Implement operation cancellation
+    if (confirm('Are you sure you want to cancel this operation? This may leave the system in an incomplete state.')) {
+        fetch('api/cancel_operation.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ operation_id: currentOperationId })
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                hideProgressModal();
+                showNotification('Operation cancelled successfully', 'warning');
+            } else {
+                showNotification('Failed to cancel operation: ' + data.message, 'error');
+            }
+        }).catch(error => {
+            showNotification('Error cancelling operation', 'error');
+        });
+    }
     alert('Operation cancellation is not yet implemented.');
 }
 </script>

@@ -334,6 +334,10 @@ class ZoomModal {
         if (type === 'image') {
             contentEl.innerHTML = `<img src="${content}" alt="${title}" onload="window.zoomModal.fitToScreen()">`;
         } else if (type === 'pdf') {
+            // Use enhanced PDF.js viewer
+            const pdfViewerUrl = `${BASE_URL}/index.php?page=pdf_viewer&file=${encodeURIComponent(src.split('/').pop())}&title=${encodeURIComponent(title)}`;
+            window.open(pdfViewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+            return;
             contentEl.innerHTML = `<iframe src="${content}" title="${title}"></iframe>`;
         } else {
             contentEl.innerHTML = content;

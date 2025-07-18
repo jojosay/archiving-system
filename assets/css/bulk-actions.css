@@ -1,0 +1,339 @@
+/* Bulk Actions Styles for PDF Template Manager */
+
+/* Bulk Actions Toolbar */
+.bulk-actions-toolbar {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bulk-actions-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.bulk-selection-info {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.95rem;
+}
+
+.bulk-actions-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.bulk-actions-buttons .btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.bulk-actions-buttons .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Templates Header */
+.templates-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.selection-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bulk-select-all {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    color: #495057;
+    user-select: none;
+}
+
+.bulk-select-all input[type="checkbox"] {
+    margin: 0;
+    transform: scale(1.1);
+}
+
+.template-count {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.view-controls {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.view-toggle {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #dee2e6;
+    background: #fff;
+    color: #6c757d;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+}
+
+.view-toggle:hover {
+    background: #f8f9fa;
+    color: #495057;
+}
+
+.view-toggle.active {
+    background: #007bff;
+    color: #fff;
+    border-color: #007bff;
+}
+
+.view-toggle .icon {
+    margin-right: 0.25rem;
+}
+
+/* Template Selection */
+.template-selection {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+}
+
+.template-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+}
+
+.template-checkbox:hover {
+    background: rgba(255, 255, 255, 1);
+    border-color: #007bff;
+    transform: scale(1.05);
+}
+
+.template-checkbox input[type="checkbox"] {
+    display: none;
+}
+
+.template-checkbox .checkmark {
+    display: none;
+    color: #007bff;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.template-checkbox input[type="checkbox"]:checked + .checkmark {
+    display: block;
+}
+
+.template-checkbox input[type="checkbox"]:checked + .checkmark::before {
+    content: "✓";
+}
+
+.template-card {
+    position: relative;
+}
+
+.template-card:hover .template-selection {
+    opacity: 1;
+}
+
+/* Template Card Modifications for Selection */
+.template-card.selected {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    transform: translateY(-2px);
+}
+
+.template-card.selected .template-checkbox {
+    background: #007bff;
+    border-color: #007bff;
+}
+
+.template-card.selected .template-checkbox .checkmark {
+    color: #fff;
+}
+
+/* List View Styles */
+.templates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.templates-list .template-card {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.templates-list .template-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.templates-list .template-preview {
+    width: 80px;
+    height: 60px;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.templates-list .template-info {
+    flex: 1;
+    margin-right: 1rem;
+}
+
+.templates-list .template-actions {
+    flex-shrink: 0;
+}
+
+/* Modal Enhancements */
+.bulk-info {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.bulk-info p {
+    margin: 0;
+    color: #1565c0;
+}
+
+.warning-message {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.warning-message .icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.warning-message p {
+    margin: 0 0 0.5rem 0;
+    color: #856404;
+}
+
+.template-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.5rem;
+    background: #f8f9fa;
+}
+
+.template-item {
+    padding: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+    color: #495057;
+    font-size: 0.875rem;
+}
+
+.template-item:last-child {
+    border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bulk-actions-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .bulk-actions-buttons {
+        justify-content: center;
+    }
+    
+    .templates-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .selection-controls {
+        justify-content: space-between;
+    }
+    
+    .view-controls {
+        justify-content: center;
+    }
+    
+    .templates-list .template-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .templates-list .template-preview {
+        margin: 0 0 1rem 0;
+    }
+}
+
+/* Animation for template removal */
+.template-card.removing {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}

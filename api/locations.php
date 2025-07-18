@@ -18,6 +18,7 @@ $region_code = $_GET['region_code'] ?? '';
 
 try {
     switch ($action) {
+        case 'get_region':
         case 'get_regions':
             $regions = $locationManager->getAllRegions();
             echo json_encode([
@@ -26,6 +27,7 @@ try {
             ]);
             break;
             
+        case 'get_province':
         case 'get_provinces':
             if (empty($region_code)) {
                 echo json_encode([
@@ -58,6 +60,7 @@ try {
             ]);
             break;
             
+        case 'get_barangay':
         case 'get_barangays':
             if (empty($parent_id)) {
                 echo json_encode([

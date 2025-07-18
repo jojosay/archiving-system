@@ -83,6 +83,20 @@ class Auth {
         ];
     }
     
+    // Get current user ID (convenience method)
+    public function getCurrentUserId() {
+        if (!$this->isLoggedIn()) {
+            return null;
+        }
+        
+        return $_SESSION['user_id'];
+    }
+    
+    // Check if current user is admin (convenience method)
+    public function isAdmin() {
+        return $this->hasRole('admin');
+    }
+    
     // Logout user
     public function logout() {
         session_unset();

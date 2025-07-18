@@ -417,19 +417,28 @@ function viewDocument(documentId) {
                     if (value.type === 'file') {
                         fileFields.push({key, value});
                     } else if (value.type === 'reference' && value.book_image_path) {
+                        // Create a display value with book title and page number if available
+                        let displayValue = value.book_title || `Reference ${value.value}`;
+                        if (value.page_number) {
+                            displayValue += ` (Page ${value.page_number})`;
+                        }
+                        if (value.book_description) {
+                            displayValue += ` - ${value.book_description}`;
+                        }
+                        
                         otherMetadata.push({
                             key, 
                             value,
                             html: `<tr>
-                                      <td><strong>${value.label || key}</strong></td>
+                                      <td><strong>${value.label && value.label.trim() !== '' ? value.label : key}</strong></td>
                                       <td>
                                           <div class="reference-field-container">
-                                              <span class="reference-field-value">${value.value}</span>
+                                              <span class="reference-field-value">${displayValue}</span>
                                               <div class="reference-field-buttons">
-                                                  <button class="btn btn-primary btn-small" onclick="previewReferenceImage('${encodeURIComponent(value.book_image_path)}', '${value.value}')">
+                                                  <button class="btn btn-primary btn-small" onclick="previewReferenceImage('${encodeURIComponent(value.book_image_path)}', '${displayValue}')">
                                                       View Reference
                                                   </button>
-                                                  <button class="btn btn-secondary btn-small" onclick="downloadReferenceImage('${encodeURIComponent(value.book_image_path)}', '${value.value}')">
+                                                  <button class="btn btn-secondary btn-small" onclick="downloadReferenceImage('${encodeURIComponent(value.book_image_path)}', '${displayValue}')">
                                                       Download
                                                   </button>
                                               </div>
@@ -443,13 +452,13 @@ function viewDocument(documentId) {
                         otherMetadata.push({
                             key,
                             value,
-                            html: `<tr><td><strong>${value.label || key}</strong></td><td>${formattedValue}</td></tr>`
+                            html: `<tr><td><strong>${value.label && value.label.trim() !== '' ? value.label : key}</strong></td><td>${formattedValue}</td></tr>`
                         });
                     } else {
                         otherMetadata.push({
                             key,
                             value,
-                            html: `<tr><td><strong>${value.label || key}</strong></td><td>${value.value}</td></tr>`
+                            html: `<tr><td><strong>${value.label && value.label.trim() !== '' ? value.label : key}</strong></td><td>${value.value || '<span style="color: #95a5a6;">N/A</span>'}</td></tr>`
                         });
                     }
                 }
@@ -468,7 +477,7 @@ function viewDocument(documentId) {
                 for (const item of fileFields) {
                     if (item.value.value) {
                         metadataFiles.push({
-                            name: item.value.label || item.key,
+                            name: item.value.label && item.value.label.trim() !== '' ? item.value.label : item.key,
                             path: item.value.value,
                             filename: item.value.value.split('/').pop(),
                             type: 'metadata'
@@ -704,13 +713,7 @@ document.addEventListener('DOMContentLoaded', function() {
     createImagePreviewModal();
 });
 
-// Include reference selector functionality
-if (typeof openReferenceSelector === 'undefined') {
-    // Load reference selector script if not already loaded
-    const script = document.createElement('script');
-    script.src = 'includes/reference_selector.js';
-    document.head.appendChild(script);
-}
+// Reference selector functionality is already loaded in layout.php
 </script>
 
 <?php renderPageEnd(); ?>
@@ -776,7 +779,7 @@ document.addEventListener('DOMContentLoaded', function() {
         customFieldsContainer.innerHTML = ''; // Clear previous fields
 
         if (documentTypeId) {
-            fetch(`api/document_type_fields.php?document_type_id=${documentTypeId}`)
+            fetch(`api/document_type_fields.php?action=get_type_fields&document_type_id=${documentTypeId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {

@@ -42,6 +42,7 @@ class CascadingDropdown {
         if (this.levels.length > 0) {
             this.loadData(this.levels[0]);
         }
+        
     }
     
     onDropdownChange(level, value) {
@@ -64,6 +65,8 @@ class CascadingDropdown {
         
         // Update hidden field with selected values
         this.updateHiddenField();
+        
+        console.log('Dropdown changed:', level, 'value:', value);
     }
     
     loadData(level, parentLevel = null, parentValue = null) {
@@ -71,9 +74,9 @@ class CascadingDropdown {
         
         // Add parent parameter based on level
         if (parentLevel && parentValue) {
-            if (level === 'provinces') {
+            if (level === 'province') {
                 url += `&region_code=${encodeURIComponent(parentValue)}`;
-            } else if (level === 'citymun' || level === 'barangays') {
+            } else if (level === 'citymun' || level === 'barangay') {
                 url += `&parent_id=${encodeURIComponent(parentValue)}`;
             }
         }
@@ -111,21 +114,21 @@ class CascadingDropdown {
             
             // Set value and text based on level
             switch (level) {
-                case 'regions':
-                    option.value = item.region_code;
-                    option.textContent = item.region_name;
+                case 'region':
+                    option.value = item.region_code || item.id;
+                    option.textContent = item.region_name || item.name;
                     break;
-                case 'provinces':
+                case 'province':
                     option.value = item.id;
-                    option.textContent = item.province_name;
+                    option.textContent = item.province_name || item.name;
                     break;
                 case 'citymun':
                     option.value = item.id;
-                    option.textContent = item.citymun_name;
+                    option.textContent = item.citymun_name || item.name;
                     break;
-                case 'barangays':
+                case 'barangay':
                     option.value = item.id;
-                    option.textContent = item.barangay_name;
+                    option.textContent = item.barangay_name || item.name;
                     break;
             }
             
@@ -155,43 +158,62 @@ class CascadingDropdown {
         });
         
         // Update hidden field with JSON data
-        const hiddenField = document.getElementById(`${this.fieldName}_data`);
+        const hiddenField = document.getElementById(this.fieldName);
         if (hiddenField) {
             hiddenField.value = JSON.stringify(selectedValues);
+            console.log('Updated hidden field:', this.fieldName, 'with value:', hiddenField.value);
+        } else {
+            console.warn('Hidden field not found:', this.fieldName);
         }
     }
     
     // Method to set values programmatically (for editing)
     async setValues(values) {
-        if (!values) return;
+        if (!values) {
+            console.log('No values provided to setValues');
+            return;
+        }
         
         try {
-            // Parse JSON if it's a string
-            const data = typeof values === 'string' ? JSON.parse(values) : values;
-            console.log('Setting cascading dropdown values:', data);
-            
-            // Set values in sequence: regions -> provinces -> citymun -> barangays
-            if (data.regions) {
-                await this.setLevelValue('regions', data.regions.value, data.regions.text);
+            let data;
+            if (typeof values === 'string') {
+                if (values.trim() === '') {
+                    return;
+                }
+                try {
+                    data = JSON.parse(values);
+                } catch (parseError) {
+                    return;
+                }
+            } else {
+                data = values;
             }
             
-            if (data.provinces) {
-                await this.setLevelValue('provinces', data.provinces.value, data.provinces.text);
+            // Set values in sequence: region -> province -> citymun -> barangay
+            if (data.regions || data.region) {
+                const regionData = data.regions || data.region;
+                await this.setLevelValue('region', regionData.value, regionData.text);
+            }
+            
+            if (data.provinces || data.province) {
+                const provinceData = data.provinces || data.province;
+                await this.setLevelValue('province', provinceData.value, provinceData.text);
             }
             
             if (data.citymun) {
                 await this.setLevelValue('citymun', data.citymun.value, data.citymun.text);
             }
             
-            if (data.barangays) {
-                await this.setLevelValue('barangays', data.barangays.value, data.barangays.text);
+            if (data.barangays || data.barangay) {
+                const barangayData = data.barangays || data.barangay;
+                await this.setLevelValue('barangay', barangayData.value, barangayData.text);
             }
             
             // Update the hidden field
             this.updateHiddenField();
             
         } catch (error) {
-            console.error('Error setting cascading dropdown values:', error);
+            // Silent error handling
         }
     }
     
@@ -239,6 +261,36 @@ class CascadingDropdown {
             
             checkReady();
         });
+    }
+    
+    // Method to set value by code (for stored values)
+    async setValueByCode(level, code) {
+        const dropdown = this.dropdowns[level];
+        if (!dropdown) {
+            console.warn(`Dropdown not found for level: ${level}`);
+            return;
+        }
+        
+        // Wait for dropdown to be populated if needed
+        await this.waitForDropdownReady(level);
+        
+        // Find and select the option by value (code)
+        const option = Array.from(dropdown.element.options).find(opt => opt.value === code);
+        if (option) {
+            dropdown.element.value = code;
+            const changeEvent = new Event('change', { bubbles: true });
+            dropdown.element.dispatchEvent(changeEvent);
+            await new Promise(resolve => setTimeout(resolve, 500));
+        } else {
+            await this.loadData(level);
+            const optionRetry = Array.from(dropdown.element.options).find(opt => opt.value === code);
+            if (optionRetry) {
+                dropdown.element.value = code;
+                const changeEvent = new Event('change', { bubbles: true });
+                dropdown.element.dispatchEvent(changeEvent);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
     }
 }
 

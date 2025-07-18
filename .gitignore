@@ -1,33 +1,211 @@
-# Temporary files
-tmp_*
-*.tmp
+# ===========================================
+# Civil Registry Archiving System v1.0.7
+# .gitignore - Updated 2025-01-15
+# ===========================================
+
+# Configuration Files (Sensitive Data)
+# =====================================
+config/config.php
+config/.installed
+config/database.php
+.env
+.env.local
+.env.production
+
+# User Data & Uploads
+# ===================
+storage/documents/*
+storage/templates/*
+storage/templates/pdf/*
+storage/templates/docx/*
+storage/templates/excel/*
+storage/templates/temp/*
+uploads/
+user_uploads/
+
+# Keep essential storage files
+!storage/documents/.htaccess
+!storage/documents/index.php
+!storage/templates/.htaccess
+!storage/templates/*/index.php
+!storage/*/.gitkeep
+
+# Logs & Temporary Files
+# ======================
 *.log
-php_error_log
+*.tmp
+tmp_*
+temp_*
+temporary_*
+logs/
+error_log
+access_log
+debug.log
+php_errors.log
 
-# Backup directories
-storage_backup_*/
+# Development & Testing Files
+# ===========================
+tmp_rovodev_*
+acli.exe
+test_*
+debug_*
+_test*
+phpunit.xml
+.phpunit.result.cache
+tests/temp/
+tests/output/
 
-# Build and release files
-releases/
-deployment/packages/*/
-
-# System files
-Thumbs.db
+# System Files
+# ============
 .DS_Store
+Thumbs.db
 desktop.ini
+*.lnk
+.directory
+.Trash-*
 
-# Cache files
-data/cache/
-data/*.log
-data/*.tmp
+# IDE & Editor Files
+# ==================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-*
+.atom/
+.brackets.json
+*.code-workspace
 
-# Development files
-*_SUMMARY.md
-*_IMPLEMENTATION_SUMMARY.md
-*_FEATURE_PLAN.md
-ICON_UPGRADE_GUIDE.md
-FEATHER_ICONS_IMPLEMENTATION.md
-FEATHER_ICONS_LOCAL_SETUP.md
-ICON_INTEGRATION_COMPLETE.md
-MODAL_ENHANCEMENT_SUMMARY.md
-RELEASE_INSTRUCTIONS_v*.md
+# Backup Files
+# ============
+*.bak
+*.backup
+*.old
+*.orig
+*_backup
+*_old
+backup_*
+
+# Cache & Generated Files
+# =======================
+cache/
+*.cache
+node_modules/
+vendor/
+composer.lock
+package-lock.json
+.sass-cache/
+*.css.map
+*.js.map
+
+# Database Files
+# ==============
+*.sqlite
+*.sqlite3
+*.db
+database_backup_*
+*.sql.backup
+
+# Compiled & Minified Files
+# =========================
+*.min.css
+*.min.js
+dist/
+build/
+compiled/
+
+# Documentation Build Files
+# =========================
+docs/_build/
+docs/build/
+*.pdf.generated
+
+# OS Generated Files
+# ==================
+.fuse_hidden*
+.nfs*
+*.pid
+*.seed
+*.pid.lock
+
+# Security & Keys
+# ===============
+*.key
+*.pem
+*.p12
+*.pfx
+.htpasswd
+auth.json
+secrets.json
+
+# Package Files
+# =============
+*.zip
+*.tar.gz
+*.rar
+*.7z
+deployment/packages/*
+!deployment/packages/.gitkeep
+
+# Runtime Files
+# =============
+*.pid
+*.lock
+.running
+session_*
+
+# Branding Uploads
+# ================
+assets/branding/logos/*
+assets/branding/backgrounds/*
+assets/branding/favicons/*
+assets/branding/themes/generated/*
+!assets/branding/*/.gitkeep
+!assets/branding/themes/templates/
+
+# Custom User Themes
+# ===================
+assets/css/custom/user_*
+assets/css/themes/custom_*
+
+# Performance & Analytics
+# =======================
+performance_*.json
+analytics_*.log
+usage_stats.json
+
+# Update Cache
+# ============
+api/data/update_cache.json
+data/update_cache.json
+
+# Temporary Development Files
+# ===========================
+scratch/
+playground/
+experiments/
+_dev/
+_temp/
+
+# Version Control
+# ===============
+.git/
+.svn/
+.hg/
+.bzr/
+
+# Archive Files
+# =============
+*.tar
+*.gz
+*.bz2
+*.xz
+*.Z
+
+# Keep Important Files
+# ====================
+!README.md
+!LICENSE
+!CHANGELOG.md
+!.gitignore
+!.htaccess

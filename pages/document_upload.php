@@ -8,13 +8,10 @@ if (!$auth->isLoggedIn()) {
 require_once 'includes/layout.php';
 require_once 'includes/document_type_manager.php';
 require_once 'includes/document_manager.php';
-require_once 'includes/template_manager.php';
 
 $docTypeManager = new DocumentTypeManager($database);
 $documentManager = new DocumentManager($database);
-$templateManager = new TemplateManager($database);
 $document_types = $docTypeManager->getAllDocumentTypes(true);
-$templates = $templateManager->getAllTemplates(true);
 
 $message = '';
 $message_type = '';
@@ -49,6 +46,7 @@ if ($_POST && isset($_POST['action']) && $_POST['action'] === 'upload_document')
     } else {
         // Process document upload
         $result = $documentManager->createDocument($document_type_id, $title, $_FILES, $metadata, $uploaded_by);
+        
         $message = $result['message'];
         $message_type = $result['success'] ? 'success' : 'error';
         
@@ -79,8 +77,8 @@ renderPageStart('Upload Document');
         </div>
     <?php endif; ?>
 
-    <div style="background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+    <div style="background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="action" value="upload_document">
             
             <div style="margin-bottom: 1.5rem;">
@@ -91,7 +89,7 @@ renderPageStart('Upload Document');
             <div style="margin-bottom: 1.5rem;">
                 <label for="document_type_id" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Document Type *</label>
                 <select id="document_type_id" name="document_type_id" required style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;" onchange="loadDocumentTypeFields()">
-                    <option value="">Select document type</option>
+                    <option value="">Select Document Type</option>
                     <?php foreach ($document_types as $type): ?>
                         <option value="<?php echo $type['id']; ?>" <?php echo (isset($_POST['document_type_id']) && $_POST['document_type_id'] == $type['id']) ? 'selected' : ''; ?>>
                             <?php echo htmlspecialchars($type['name']); ?>
@@ -100,46 +98,12 @@ renderPageStart('Upload Document');
                 </select>
             </div>
             
-            <!-- Template Selection Section -->
-            <div style="margin-bottom: 1.5rem;">
-                <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Start with Template (Optional)</label>
-                <div style="border: 1px solid #e9ecef; border-radius: 8px; padding: 1rem; background: #f8f9fa;">
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                        <select id="template_filter" style="flex: 1; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;" onchange="filterTemplates()">
-                            <option value="">All Categories</option>
-                            <?php 
-                            $categories = [];
-                            foreach ($templates as $template) {
-                                if ($template['category'] && !in_array($template['category'], $categories)) {
-                                    $categories[] = $template['category'];
-                                }
-                            }
-                            foreach ($categories as $category): ?>
-                                <option value="<?php echo htmlspecialchars($category); ?>"><?php echo htmlspecialchars($category); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <a href="?page=template_gallery" target="_blank" style="padding: 0.5rem 1rem; background: #6c757d; color: white; text-decoration: none; border-radius: 4px;">Browse All</a>
-                    </div>
-                    <div id="template_selection" style="max-height: 200px; overflow-y: auto;">
-                        <?php if (empty($templates)): ?>
-                            <p style="text-align: center; color: #6c757d; margin: 1rem 0;">No templates available</p>
-                        <?php else: ?>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.5rem;">
-                                <?php foreach ($templates as $template): ?>
-                                    <div class="template-option" data-category="<?php echo htmlspecialchars($template['category'] ?? ''); ?>" style="border: 1px solid #dee2e6; border-radius: 4px; padding: 0.75rem; cursor: pointer; transition: all 0.2s;" onclick="selectTemplate(<?php echo $template['id']; ?>, '<?php echo htmlspecialchars($template['name']); ?>')">
-                                        <div style="font-weight: 500; font-size: 0.9rem; margin-bottom: 0.25rem;"><?php echo htmlspecialchars($template['name']); ?></div>
-                                        <div style="font-size: 0.8rem; color: #6c757d;"><?php echo strtoupper($template['file_type']); ?> - <?php echo htmlspecialchars($template['category'] ?? 'Uncategorized'); ?></div>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    <div id="selected_template" style="margin-top: 1rem; padding: 0.75rem; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; display: none;">
-                        <strong>Selected Template:</strong> <span id="selected_template_name"></span>
-                        <button type="button" onclick="clearTemplate()" style="float: right; background: none; border: none; color: #721c24; cursor: pointer;">X</button>
-                        <input type="hidden" id="selected_template_id" name="template_id" value="">
-                    </div>
-                </div>
+            <!-- Enhanced PDF Upload Notice -->
+            <div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0; color: #0c5460;">Enhanced PDF Support</h4>
+                <p style="margin: 0; font-size: 0.9rem; color: #0c5460;">
+                    PDF files now include: metadata extraction, enhanced validation, secure viewing, and support for files up to 50MB.
+                </p>
             </div>
             
             <!-- Dynamic metadata fields will be loaded here -->
@@ -151,6 +115,9 @@ renderPageStart('Upload Document');
         </form>
     </div>
 </div>
+
+<!-- Include reference selector and cascading dropdown scripts -->
+<!-- Scripts are already loaded in layout.php -->
 
 <script>
 // Load document type fields dynamically
@@ -166,7 +133,7 @@ function loadDocumentTypeFields() {
     metadataContainer.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 1rem;">Loading fields...</p>';
     
     // Fetch fields for the selected document type
-    fetch(`api/document_type_fields.php?type_id=${typeId}`)
+    fetch(`api/document_type_fields.php?action=get_type_fields&document_type_id=${typeId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.fields) {
@@ -184,12 +151,12 @@ function loadDocumentTypeFields() {
 function displayMetadataFields(fields) {
     const container = document.getElementById('metadata-fields');
     
-    if (!fields || fields.length === 0) {
-        container.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 1rem;">No additional fields required for this document type.</p>';
+    if (fields.length === 0) {
+        container.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 1rem;">No additional fields required for this document type</p>';
         return;
     }
     
-    let html = '<h4 style="margin-bottom: 1rem; color: #495057;">Additional Information</h4>';
+    let html = '<h4 style="margin-bottom: 1rem; color: #2c3e50;">Additional Information</h4>';
     
     fields.forEach(field => {
         html += generateFieldHTML(field);
@@ -197,32 +164,41 @@ function displayMetadataFields(fields) {
     
     container.innerHTML = html;
     
-    // Initialize any special field types
-    fields.forEach(field => {
-        if (field.field_type === 'reference') {
-            initializeReferenceField(field.field_name);
-        } else if (field.field_type === 'cascading_dropdown') {
-            initializeCascadingDropdown(field.field_name);
-        }
-    });
+    // Initialize special field types after DOM update
+    setTimeout(() => {
+        fields.forEach(field => {
+            if (field.field_type === 'cascading_dropdown') {
+                console.log('Initializing cascading dropdown for:', field.field_name);
+                if (typeof initCascadingDropdown === 'function') {
+                    const levels = ['region', 'province', 'citymun', 'barangay'];
+                    initCascadingDropdown(field.field_name, levels);
+                }
+            } else if (field.field_type === 'reference') {
+                console.log('Initializing reference field for:', field.field_name);
+                initializeReferenceButtons();
+            }
+        });
+    }, 100);
 }
 
 function generateFieldHTML(field) {
     const fieldName = field.field_name;
-    const fieldLabel = field.field_label;
-    const fieldType = field.field_type;
+    const fieldLabel = field.field_label || fieldName;
     const isRequired = field.is_required;
-    const fieldOptions = field.field_options;
-    
+    const fieldType = field.field_type;
     const requiredAttr = isRequired ? 'required' : '';
-    const requiredMark = isRequired ? ' <span style="color: red;">*</span>' : '';
+    const requiredMark = isRequired ? ' *' : '';
     
-    let html = '<div style="margin-bottom: 1rem;">';
-    html += `<label for="metadata_${fieldName}" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">${fieldLabel}${requiredMark}</label>`;
+    let html = `<div style="margin-bottom: 1.5rem;">
+        <label for="metadata_${fieldName}" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">${fieldLabel}${requiredMark}</label>`;
     
     switch (fieldType) {
         case 'text':
             html += `<input type="text" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;">`;
+            break;
+            
+        case 'textarea':
+            html += `<textarea id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} rows="4" style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; resize: vertical;"></textarea>`;
             break;
             
         case 'number':
@@ -233,39 +209,6 @@ function generateFieldHTML(field) {
             html += `<input type="date" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;">`;
             break;
             
-        case 'time':
-            html += `<input type="time" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;">`;
-            break;
-            
-        case 'textarea':
-            html += `<textarea id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; height: 100px; resize: vertical;"></textarea>`;
-            break;
-            
-        case 'dropdown':
-            html += `<select id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;">`;
-            html += '<option value="">Select an option</option>';
-            
-            if (fieldOptions) {
-                try {
-                    const options = JSON.parse(fieldOptions);
-                    options.forEach(option => {
-                        html += `<option value="${option}">${option}</option>`;
-                    });
-                } catch (e) {
-                    console.error('Error parsing field options:', e);
-                }
-            }
-            html += '</select>';
-            break;
-            
-        case 'cascading_dropdown':
-            html += generateCascadingDropdownHTML(fieldName, requiredAttr);
-            break;
-            
-        case 'reference':
-            html += generateReferenceFieldHTML(fieldName, requiredAttr);
-            break;
-
         case 'file':
             html += `
                 <input type="file" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="display: none;" accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif">
@@ -280,6 +223,52 @@ function generateFieldHTML(field) {
             `;
             break;
             
+        case 'cascading_dropdown':
+            html += `
+                <div class="cascading-dropdown-container" id="${fieldName}_container">
+                    <div class="dropdown-level" style="margin-bottom: 0.5rem;">
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #495057;">Region:</label>
+                        <select id="${fieldName}_region" name="metadata[${fieldName}_region]" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;">
+                            <option value="">Select Region</option>
+                        </select>
+                    </div>
+                    <div class="dropdown-level" style="margin-bottom: 0.5rem;">
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #495057;">Province:</label>
+                        <select id="${fieldName}_province" name="metadata[${fieldName}_province]" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;" disabled>
+                            <option value="">Select Province</option>
+                        </select>
+                    </div>
+                    <div class="dropdown-level" style="margin-bottom: 0.5rem;">
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #495057;">City/Municipality:</label>
+                        <select id="${fieldName}_citymun" name="metadata[${fieldName}_citymun]" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;" disabled>
+                            <option value="">Select City/Municipality</option>
+                        </select>
+                    </div>
+                    <div class="dropdown-level">
+                        <label style="display: block; margin-bottom: 0.25rem; font-size: 0.9rem; color: #495057;">Barangay:</label>
+                        <select id="${fieldName}_barangay" name="metadata[${fieldName}_barangay]" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px;" disabled>
+                            <option value="">Select Barangay</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr}>
+                </div>
+            `;
+            break;
+            
+        case 'reference':
+            html += `
+                <div style="margin-bottom: 0.5rem;">
+                    <button type="button" class="select-reference-btn" data-field-id="metadata_${fieldName}" style="padding: 0.75rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 0.5rem;">
+                        [REF] Select Reference Document
+                    </button>
+                    <input type="hidden" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr}>
+                    <div id="metadata_${fieldName}_display" style="border: 1px solid #ced4da; border-radius: 4px; padding: 1rem; background: #f8f9fa; min-height: 60px;">
+                        <span style="color: #6c757d;">No reference document selected</span>
+                    </div>
+                </div>
+            `;
+            break;
+            
         default:
             html += `<input type="text" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr} style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px;">`;
     }
@@ -288,75 +277,9 @@ function generateFieldHTML(field) {
     return html;
 }
 
-function generateCascadingDropdownHTML(fieldName, requiredAttr) {
-    // Default hierarchy levels - this should come from field configuration
-    const levels = ['regions', 'provinces', 'citymun', 'barangays'];
-    const labels = ['Region', 'Province', 'City/Municipality', 'Barangay'];
-    
-    let html = '';
-    
-    // Generate dropdowns for each level
-    levels.forEach((level, index) => {
-        const label = labels[index];
-        const selectId = `metadata_${fieldName}_${level}`;
-        
-        html += `
-            <div style="margin-bottom: 0.5rem;">
-                <label for="${selectId}" style="font-size: 0.9rem; color: #6C757D; margin-bottom: 0.25rem; display: block;">${label}</label>
-                <select id="${selectId}" class="cascading-dropdown" style="width: 100%; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; margin-bottom: 0.5rem;">
-                    <option value="">Select ${label}</option>
-                </select>
-            </div>
-        `;
-    });
-    
-    // Hidden field to store the final selected values
-    html += `<input type="hidden" id="metadata_${fieldName}_data" name="metadata[${fieldName}]" ${requiredAttr}>`;
-    
-    return html;
-}
-
-function generateReferenceFieldHTML(fieldName, requiredAttr) {
-    return `
-        <input type="hidden" id="metadata_${fieldName}" name="metadata[${fieldName}]" ${requiredAttr}>
-        <div id="metadata_${fieldName}_display" style="border: 1px solid #ddd; border-radius: 4px; padding: 1rem; margin-bottom: 0.5rem; min-height: 60px; background: #f8f9fa;">
-            <div style="color: #6c757d; text-align: center; padding: 1rem;">No image selected</div>
-        </div>
-        <button type="button" class="select-reference-btn" data-field-id="metadata_${fieldName}" style="padding: 0.5rem 1rem; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">Select Image</button>
-        <button type="button" onclick="clearReferenceSelection('metadata_${fieldName}')" style="padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">Clear</button>
-    `;
-}
-
-function initializeCascadingDropdown(fieldName) {
-    // Initialize cascading dropdown with default levels
-    const levels = ['regions', 'provinces', 'citymun', 'barangays'];
-    const fullFieldName = `metadata_${fieldName}`;
-    
-    console.log('Initializing cascading dropdown for field:', fullFieldName);
-    
-    // Use the global function from cascading_dropdown.js
-    setTimeout(() => {
-        if (typeof initCascadingDropdown === 'function') {
-            initCascadingDropdown(fullFieldName, levels);
-        } else {
-            console.error('initCascadingDropdown function not found');
-        }
-    }, 100);
-}
-
-function initializeReferenceField(fieldName) {
-    const button = document.querySelector(`[data-field-id="metadata_${fieldName}"]`);
-    if (button) {
-        button.addEventListener('click', function() {
-            openReferenceSelector(`metadata_${fieldName}`);
-        });
-    }
-}
-
 // File handling functions
 function selectDocument(fieldName) {
-    const fileInput = document.getElementById('metadata_' + fieldName);
-    fileInput.click();
+    document.getElementById('metadata_' + fieldName).click();
 }
 
 function clearFileSelection(fieldName) {
@@ -364,32 +287,24 @@ function clearFileSelection(fieldName) {
     const display = document.getElementById('metadata_' + fieldName + '_display');
     const previewBtn = document.getElementById('metadata_' + fieldName + '_preview_btn');
     
-    // Clear the file input
     fileInput.value = '';
-    
-    // Update display
-    display.innerHTML = '<div id="metadata_' + fieldName + '_placeholder" style="color: #6c757d; text-align: center; padding: 1rem;">No file selected</div>';
-    
-    // Hide preview button
+    display.innerHTML = '<div style="color: #6c757d; text-align: center; padding: 1rem;">No file selected</div>';
     if (previewBtn) {
         previewBtn.style.display = 'none';
     }
 }
 
 function previewDocument(fieldName, filePath) {
-    if (!filePath) {
-        const fileInput = document.getElementById('metadata_' + fieldName);
-        if (fileInput.files && fileInput.files[0]) {
-            const file = fileInput.files[0];
-            const fileURL = URL.createObjectURL(file);
-            openPreviewWindow(fileURL, file.name);
-        } else {
-            alert('No file selected for preview');
-        }
+    const fileInput = document.getElementById('metadata_' + fieldName);
+    
+    if (fileInput.files && fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const fileURL = URL.createObjectURL(file);
+        openPreviewWindow(fileURL, file.name);
+    } else if (filePath) {
+        openPreviewWindow(filePath, 'Document');
     } else {
-        // Preview existing file through secure endpoint
-        const fileURL = 'api/serve_file.php?file=' + encodeURIComponent(filePath);
-        openPreviewWindow(fileURL, filePath.split('/').pop());
+        alert('No file selected for preview');
     }
 }
 
@@ -397,66 +312,33 @@ function openPreviewWindow(fileURL, fileName) {
     const fileExtension = fileName.split('.').pop().toLowerCase();
     
     if (['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension)) {
-        // Image preview with error handling
+        // Image preview
         const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
         previewWindow.document.write(`
             <html>
                 <head><title>Preview: ${fileName}</title></head>
                 <body style="margin: 0; padding: 20px; text-align: center; background: #f5f5f5;">
                     <h3>${fileName}</h3>
-                    <div id="imageContainer">
-                        <img src="${fileURL}" 
-                             style="max-width: 100%; max-height: 80vh; border: 1px solid #ddd; border-radius: 4px;"
-                             onload="document.getElementById('errorMsg').style.display='none';"
-                             onerror="document.getElementById('errorMsg').style.display='block'; this.style.display='none';">
-                        <div id="errorMsg" style="display: none; color: #dc3545; padding: 2rem; border: 1px solid #dc3545; border-radius: 4px; background: #f8d7da;">
-                            <h4>Unable to preview image</h4>
-                            <p>The file may not exist or may not be accessible.</p>
-                            <p><strong>File URL:</strong> ${fileURL}</p>
-                            <button onclick="window.location.href='${fileURL}'" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Try Direct Download</button>
-                        </div>
-                    </div>
+                    <img src="${fileURL}" style="max-width: 100%; max-height: 80vh; border: 1px solid #ddd; border-radius: 4px;">
                 </body>
             </html>
         `);
     } else if (['pdf'].includes(fileExtension)) {
-        // PDF preview with error handling
-        const previewWindow = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
-        previewWindow.document.write(`
-            <html>
-                <head><title>Preview: ${fileName}</title></head>
-                <body style="margin: 0; padding: 20px;">
-                    <h3>${fileName}</h3>
-                    <div id="pdfContainer">
-                        <iframe src="${fileURL}" width="100%" height="600px" style="border: 1px solid #ddd;"
-                                onload="document.getElementById('pdfErrorMsg').style.display='none';"
-                                onerror="document.getElementById('pdfErrorMsg').style.display='block';">
-                        </iframe>
-                        <div id="pdfErrorMsg" style="display: none; color: #dc3545; padding: 2rem; border: 1px solid #dc3545; border-radius: 4px; background: #f8d7da; margin-top: 1rem;">
-                            <h4>Unable to preview PDF</h4>
-                            <p>The file may not exist or your browser may not support PDF preview.</p>
-                            <p><strong>File URL:</strong> ${fileURL}</p>
-                            <button onclick="window.location.href='${fileURL}'" style="padding: 0.5rem 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Try Direct Download</button>
-                        </div>
-                    </div>
-                </body>
-            </html>
-        `);
+        // Use enhanced PDF.js viewer for better experience
+        const pdfViewerUrl = `${BASE_URL}/index.php?page=pdf_viewer&file=${encodeURIComponent(fileName)}&title=${encodeURIComponent(fileName)}`;
+        window.open(pdfViewerUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
     } else {
         // For other file types, try to open directly
         window.open(fileURL, '_blank');
     }
 }
 
-// Add event listeners for file inputs when the page loads
+// Enhanced file change handler with PDF support
 document.addEventListener('DOMContentLoaded', function() {
-    // Function to add file input listeners
     function addFileInputListeners() {
         const fileInputs = document.querySelectorAll('input[type="file"][id^="metadata_"]');
         fileInputs.forEach(function(input) {
-            // Remove existing listener to avoid duplicates
             input.removeEventListener('change', handleFileChange);
-            // Add new listener
             input.addEventListener('change', handleFileChange);
         });
     }
@@ -468,76 +350,93 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (event.target.files && event.target.files[0]) {
             const file = event.target.files[0];
-            const fileSize = (file.size / 1024 / 1024).toFixed(2); // Size in MB
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            const fileExtension = file.name.split('.').pop().toLowerCase();
             
-            // Update display
-            display.innerHTML = `
-                <div id="metadata_${fieldName}_file_info">
-                    <p style="margin: 0; font-weight: 500; color: #495057;">File: ${file.name}</p>
-                    <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: #6c757d;">Size: ${fileSize} MB | Selected for upload</p>
-                </div>
-            `;
+            // Enhanced display for PDF files
+            if (fileExtension === 'pdf') {
+                display.innerHTML = `
+                    <div style="background: #e7f3ff; border: 1px solid #b3d9ff; border-radius: 4px; padding: 0.75rem;">
+                        <div style="display: flex; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: #dc3545; font-size: 1.2rem; margin-right: 0.5rem;">[PDF]</span>
+                            <div>
+                                <p style="margin: 0; font-weight: 500; color: #495057;">PDF Document: ${file.name}</p>
+                                <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: #6c757d;">Size: ${fileSize} MB | Ready for upload</p>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #0c5460; background: #d1ecf1; padding: 0.5rem; border-radius: 3px;">
+                            <strong>PDF Features:</strong> Secure viewing, metadata extraction, and enhanced validation
+                        </div>
+                    </div>
+                `;
+            } else {
+                display.innerHTML = `
+                    <div>
+                        <p style="margin: 0; font-weight: 500; color: #495057;">File: ${file.name}</p>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 0.9rem; color: #6c757d;">Size: ${fileSize} MB | Selected for upload</p>
+                    </div>
+                `;
+            }
             
-            // Show preview button
             if (previewBtn) {
                 previewBtn.style.display = 'inline-block';
             }
         }
     }
     
-    // Initial setup
     addFileInputListeners();
     
-    // Re-add listeners when new fields are loaded
     const originalDisplayMetadataFields = window.displayMetadataFields;
     window.displayMetadataFields = function(fields) {
         originalDisplayMetadataFields(fields);
-        // Add listeners to new file inputs
         setTimeout(addFileInputListeners, 100);
+        
+        // Initialize special field types after DOM update
+        setTimeout(() => {
+            fields.forEach(field => {
+                console.log('Processing field:', field.field_name, 'type:', field.field_type);
+                if (field.field_type === 'cascading_dropdown') {
+                    console.log('Initializing cascading dropdown for:', field.field_name);
+                    if (typeof initCascadingDropdown === 'function') {
+                        const levels = ['region', 'province', 'citymun', 'barangay'];
+                        initCascadingDropdown(field.field_name, levels);
+                    }
+                } else if (field.field_type === 'reference') {
+                    console.log('Initializing reference field for:', field.field_name);
+                    initializeReferenceButtons();
+                }
+            });
+        }, 200);
     }
 });
 
-// Template selection functions
-function filterTemplates() {
-    const filter = document.getElementById('template_filter').value;
-    const templateOptions = document.querySelectorAll('.template-option');
-    
-    templateOptions.forEach(option => {
-        const category = option.getAttribute('data-category');
-        if (!filter || category === filter) {
-            option.style.display = 'block';
-        } else {
-            option.style.display = 'none';
+// Initialize cascading dropdown field
+function initializeCascadingDropdownField(fieldName) {
+    if (typeof initCascadingDropdown === 'function') {
+        const levels = ['region', 'province', 'citymun', 'barangay'];
+        initCascadingDropdown(fieldName, levels);
+    } else {
+        console.warn('initCascadingDropdown function not found');
+    }
+}
+
+// Initialize reference field buttons
+function initializeReferenceButtons() {
+    document.querySelectorAll('.select-reference-btn').forEach(button => {
+        if (!button.hasAttribute('data-initialized')) {
+            button.setAttribute('data-initialized', 'true');
+            button.addEventListener('click', function() {
+                const fieldId = this.getAttribute('data-field-id');
+                console.log('Reference button clicked for field:', fieldId);
+                
+                if (typeof openReferenceSelector === 'function') {
+                    openReferenceSelector(fieldId);
+                } else {
+                    console.error('openReferenceSelector function not found');
+                    alert('Reference selector not available. Please check if the script is loaded.');
+                }
+            });
         }
-    });
-}
-
-function selectTemplate(templateId, templateName) {
-    // Update hidden input
-    document.getElementById('selected_template_id').value = templateId;
-    document.getElementById('selected_template_name').textContent = templateName;
-    
-    // Show selected template section
-    document.getElementById('selected_template').style.display = 'block';
-    
-    // Highlight selected template
-    document.querySelectorAll('.template-option').forEach(option => {
-        option.style.background = '';
-        option.style.borderColor = '#dee2e6';
-    });
-    
-    event.target.closest('.template-option').style.background = '#e7f3ff';
-    event.target.closest('.template-option').style.borderColor = '#007bff';
-}
-
-function clearTemplate() {
-    document.getElementById('selected_template_id').value = '';
-    document.getElementById('selected_template').style.display = 'none';
-    
-    // Remove highlighting
-    document.querySelectorAll('.template-option').forEach(option => {
-        option.style.background = '';
-        option.style.borderColor = '#dee2e6';
     });
 }
 </script>

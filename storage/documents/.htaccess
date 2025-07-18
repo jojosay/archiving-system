@@ -1,0 +1,14 @@
+# Secure document storage
+# Deny direct access to all files
+Order Deny,Allow
+Deny from all
+
+# Allow access only through PHP scripts
+<Files ~ "\.(php)$">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Prevent execution of scripts
+Options -ExecCGI
+AddHandler cgi-script .php .pl .py .jsp .asp .sh .cgi

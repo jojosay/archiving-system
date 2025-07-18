@@ -11,6 +11,8 @@ function renderPageStart($title = '', $current_page = '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($app_title); ?></title>
+    <link rel="stylesheet" href="assets/css/notifications.css">
+    <link rel="stylesheet" href="assets/css/performance.css">
     <style>
         * {
             margin: 0;
@@ -217,6 +219,7 @@ function renderPageStart($title = '', $current_page = '') {
     <!-- Local Assets -->
     <link rel="stylesheet" href="assets/css/custom/app.css">
     <link rel="stylesheet" href="assets/css/custom/icons.css">
+    <link rel="stylesheet" href="assets/css/custom/modal.css">
     <script src="assets/js/app/main.js"></script>
     <script src="assets/js/app/zoom-modal.js"></script>
     
@@ -264,6 +267,7 @@ function renderPageStart($title = '', $current_page = '') {
                         <a href="?page=document_archive" class="nav-item <?php echo $current_page === 'document_archive' ? 'active' : ''; ?>">
                             <span class="icon">🔍</span> Browse Archive
                         </a>
+                        
                     </div>
                 </div>
 
@@ -274,20 +278,9 @@ function renderPageStart($title = '', $current_page = '') {
                         <span class="nav-category-toggle" id="templates-toggle">▼</span>
                     </div>
                     <div class="nav-category-items" id="templates-items">
-                        <a href="?page=template_gallery" class="nav-item <?php echo $current_page === 'template_gallery' ? 'active' : ''; ?>">
-                            <span class="icon">📚</span> Template Gallery
+                        <a href="?page=pdf_template_manager" class="nav-item <?php echo $current_page === 'pdf_template_manager' ? 'active' : ''; ?>">
+                            <span class="icon">📚</span> PDF Template Manager
                         </a>
-                        <a href="?page=template_upload" class="nav-item <?php echo $current_page === 'template_upload' ? 'active' : ''; ?>">
-                            <span class="icon">📤</span> Upload Template
-                        </a>
-                        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                            <a href="?page=template_management" class="nav-item <?php echo $current_page === 'template_management' ? 'active' : ''; ?>">
-                                <span class="icon">📄</span> Template Management
-                            </a>
-                            <a href="?page=template_categories" class="nav-item <?php echo $current_page === 'template_categories' ? 'active' : ''; ?>">
-                                <span class="icon">🏷️</span> Template Categories
-                            </a>
-                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -513,6 +506,9 @@ function renderPageEnd() {
             });
         });
     </script>
+    
+    <!-- Performance optimization script -->
+    <script src="assets/js/performance.js"></script>
 </body>
 </html>
 <?php

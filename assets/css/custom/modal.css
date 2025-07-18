@@ -1,0 +1,61 @@
+.modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+
+.modal-body {
+    overflow-y: auto;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.metadata-section,
+.file-section {
+    grid-column: span 2;
+}
+
+.metadata-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.metadata-table th,
+.metadata-table td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.metadata-table th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+    width: 30%;
+}
+
+.file-list {
+    list-style: none;
+    padding: 0;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.file-info p {
+    margin: 0;
+}
+
+.file-actions .btn {
+    margin-left: 10px;
+}

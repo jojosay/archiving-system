@@ -1,0 +1,167 @@
+/* Dashboard Specific Styles */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e9ecef;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #F39C12;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.stat-label {
+    color: #7F8C8D;
+    font-size: 1rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.quick-actions {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.quick-actions h3 {
+    color: #2C3E50;
+    margin-bottom: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.action-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.action-card {
+    padding: 1.5rem;
+    border: 2px solid #ECF0F1;
+    border-radius: 8px;
+    text-align: center;
+    text-decoration: none;
+    color: #2C3E50;
+    transition: all 0.3s ease;
+    display: block;
+    position: relative;
+    overflow: hidden;
+}
+
+.action-card:hover {
+    border-color: #F39C12;
+    background: #FEF9E7;
+    transform: translateY(-2px);
+    text-decoration: none;
+    color: #2C3E50;
+}
+
+.action-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    border-color: #BDC3C7;
+}
+
+.action-card.disabled:hover {
+    transform: none;
+    border-color: #BDC3C7;
+    background: #F8F9FA;
+}
+
+.action-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+    color: #F39C12;
+    font-weight: bold;
+}
+
+.action-card.disabled .action-icon {
+    color: #BDC3C7;
+}
+
+.action-title {
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.action-subtitle {
+    font-size: 0.8rem;
+    color: #7F8C8D;
+    margin-top: 0.25rem;
+}
+
+/* Coming Soon Badge */
+.coming-soon-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #E74C3C;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    
+    .action-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 1.5rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+    }
+    
+    .quick-actions {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+    }
+}

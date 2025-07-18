@@ -1,5 +1,6 @@
 -- Civil Registry Archiving System Database Schema
--- Version: 1.0.0
+-- Version: 1.0.7
+-- Updated: 2025-01-15 - Added multi-page PDF support and enhanced template management
 
 CREATE DATABASE IF NOT EXISTS civil_registry_db;
 USE civil_registry_db;

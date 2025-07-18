@@ -1,0 +1,225 @@
+/* PDF Template Manager - Clean UI Enhancements */
+
+/* Remove unnecessary styles and clean up the interface */
+.pdf-template-manager {
+    background: #f8fafc !important;
+    padding: 1.5rem !important;
+}
+
+/* Simplified Header */
+.manager-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-radius: 16px !important;
+    padding: 2rem !important;
+    margin-bottom: 1.5rem !important;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* Clean Templates Container */
+.templates-container {
+    background: white !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    padding: 2rem !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Enhanced Templates Header */
+.templates-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    margin-bottom: 2rem !important;
+    padding-bottom: 1rem !important;
+    border-bottom: 2px solid #f1f5f9 !important;
+}
+
+.header-left h2 {
+    margin: 0 0 0.5rem 0 !important;
+    color: #1e293b !important;
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em !important;
+}
+
+.header-left p {
+    margin: 0 !important;
+    color: #64748b !important;
+    font-size: 0.95rem !important;
+}
+
+/* Templates Count Badge */
+.templates-count {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
+    padding: 0.75rem 1.25rem !important;
+    border-radius: 12px !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.templates-count span:first-child {
+    font-size: 0.875rem !important;
+    color: #64748b !important;
+    font-weight: 500 !important;
+}
+
+.templates-count span:last-child {
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    font-size: 1rem !important;
+}
+
+/* Clean Filter Styles */
+.filters-container {
+    background: white !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    padding: 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+    border: 1px solid #e2e8f0 !important;
+}
+
+/* Form Controls Enhancement */
+.form-control {
+    padding: 0.75rem 1rem !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    font-size: 0.875rem !important;
+    transition: all 0.2s ease !important;
+    background: white !important;
+}
+
+.form-control:focus {
+    outline: none !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+/* Enhanced Alert Styles */
+.alert {
+    padding: 1rem 1.5rem !important;
+    border-radius: 12px !important;
+    margin-bottom: 1.5rem !important;
+    border: 1px solid transparent !important;
+    font-weight: 500 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+}
+
+.alert-success {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+    color: #065f46 !important;
+    border-color: #10b981 !important;
+}
+
+.alert-success::before {
+    content: '✓' !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    background: #10b981 !important;
+    color: white !important;
+    border-radius: 50% !important;
+    font-weight: bold !important;
+    font-size: 0.875rem !important;
+}
+
+.alert-error {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%) !important;
+    color: #991b1b !important;
+    border-color: #ef4444 !important;
+}
+
+.alert-error::before {
+    content: '!' !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 1.5rem !important;
+    height: 1.5rem !important;
+    background: #ef4444 !important;
+    color: white !important;
+    border-radius: 50% !important;
+    font-weight: bold !important;
+    font-size: 0.875rem !important;
+}
+
+/* Loading State Enhancement */
+.loading-state {
+    text-align: center !important;
+    padding: 4rem 2rem !important;
+    color: #64748b !important;
+}
+
+.spinner {
+    border: 3px solid #f1f5f9 !important;
+    border-top: 3px solid #667eea !important;
+    border-radius: 50% !important;
+    width: 3rem !important;
+    height: 3rem !important;
+    animation: spin 1s linear infinite !important;
+    margin: 0 auto 1.5rem !important;
+}
+
+/* Empty State Enhancement */
+.empty-state {
+    text-align: center !important;
+    padding: 4rem 2rem !important;
+    color: #64748b !important;
+}
+
+.empty-state .empty-icon {
+    font-size: 4rem !important;
+    margin-bottom: 1.5rem !important;
+    opacity: 0.6 !important;
+    display: block !important;
+}
+
+.empty-state h3 {
+    color: #334155 !important;
+    font-size: 1.5rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 1rem !important;
+}
+
+.empty-state p {
+    font-size: 1rem !important;
+    margin-bottom: 2rem !important;
+    max-width: 400px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+}
+
+/* Remove old card styles that might conflict */
+.template-card,
+.templates-grid {
+    display: none !important;
+}
+
+/* Ensure table is always visible */
+.templates-table-container {
+    display: block !important;
+}
+
+/* Clean up any conflicting styles */
+.pdf-template-manager * {
+    box-sizing: border-box;
+}
+
+/* Smooth transitions for all interactive elements */
+.pdf-template-manager button,
+.pdf-template-manager input,
+.pdf-template-manager select {
+    transition: all 0.2s ease !important;
+}
+
+/* Focus states for accessibility */
+.pdf-template-manager button:focus,
+.pdf-template-manager input:focus,
+.pdf-template-manager select:focus {
+    outline: 2px solid #667eea !important;
+    outline-offset: 2px !important;
+}

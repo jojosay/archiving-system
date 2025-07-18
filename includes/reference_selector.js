@@ -366,17 +366,40 @@ function escapeHtml(text) {
 function clearReferenceSelection(fieldId) {
     console.log('Clearing reference selection for field:', fieldId);
     
+    // Handle both with and without metadata_ prefix
+    const actualFieldId = fieldId.startsWith('metadata_') ? fieldId : 'metadata_' + fieldId;
+    
     // Clear the hidden input value
-    const hiddenInput = document.getElementById(fieldId);
+    const hiddenInput = document.getElementById(actualFieldId);
     if (hiddenInput) {
         hiddenInput.value = '';
     }
     
     // Clear the display area
-    const displayArea = document.getElementById(fieldId + '_display');
+    const displayArea = document.getElementById(actualFieldId + '_display');
     if (displayArea) {
         displayArea.innerHTML = '<div style="color: #6c757d; text-align: center; padding: 1rem; border: 1px dashed #ddd; border-radius: 4px;">No image selected</div>';
     }
     
-    console.log('Reference selection cleared for field:', fieldId);
+    console.log('Reference selection cleared for field:', actualFieldId);
+}
+
+// Initialize reference field buttons globally
+function initializeReferenceButtons() {
+    document.querySelectorAll('.select-reference-btn').forEach(button => {
+        if (!button.hasAttribute('data-initialized')) {
+            button.setAttribute('data-initialized', 'true');
+            button.addEventListener('click', function() {
+                const fieldId = this.getAttribute('data-field-id');
+                console.log('Reference button clicked for field:', fieldId);
+                
+                if (typeof openReferenceSelector === 'function') {
+                    openReferenceSelector(fieldId);
+                } else {
+                    console.error('openReferenceSelector function not found');
+                    alert('Reference selector not available. Please check if the script is loaded.');
+                }
+            });
+        }
+    });
 }

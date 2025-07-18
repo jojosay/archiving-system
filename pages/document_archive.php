@@ -31,6 +31,21 @@ try {
     $provinces = [];
 }
 
+// Get PDF templates for generation
+try {
+    $stmt = $conn->prepare("
+        SELECT pt.*, dt.name as document_type_name 
+        FROM pdf_templates pt 
+        LEFT JOIN document_types dt ON pt.document_type_id = dt.id 
+        WHERE (pt.deleted = 0 OR pt.deleted IS NULL)
+        ORDER BY pt.name
+    ");
+    $stmt->execute();
+    $pdf_templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $pdf_templates = [];
+}
+
 // Search documents
 $documents = [];
 try {
@@ -94,6 +109,27 @@ renderPageStart('Document Archive', 'document_archive');
         gap: 1rem;
         justify-content: flex-end;
         margin-top: 1rem;
+    }
+    
+    .btn-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-info:hover {
+        background-color: #138496;
+    }
+    
+    .document-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 1rem;
+    }
+    
+    .document-actions .btn-small {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
     }
     
     .btn {
@@ -403,6 +439,12 @@ renderPageStart('Document Archive', 'document_archive');
                     <button class="btn btn-secondary btn-small" onclick="editDocument(<?php echo $document['id']; ?>)">
                         Edit
                     </button>
+                    <button class="btn btn-success btn-small" onclick="openPdfModal(<?php echo $document['id']; ?>)">
+                        Generate PDF
+                    </button>
+                    <button class="btn btn-info btn-small" onclick="previewPdfWithFields(<?php echo $document['id']; ?>)">
+                        Preview PDF
+                    </button>
                     <button class="btn btn-danger btn-small" onclick="deleteDocument(<?php echo $document['id']; ?>)">
                         Delete
                     </button>
@@ -436,6 +478,11 @@ function viewDocument(documentId) {
     const titleEl = document.getElementById('document-viewer-title');
     const contentEl = document.getElementById('document-viewer-content');
 
+    if (!modal) {
+        alert('Error: Modal element not found!');
+        return;
+    }
+
     // Show loading state
     titleEl.textContent = 'Loading...';
     contentEl.innerHTML = '<p>Loading document details...</p>';
@@ -443,7 +490,12 @@ function viewDocument(documentId) {
 
     // Fetch document details from API
     fetch(`api/document_details.php?id=${documentId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 titleEl.textContent = data.document.title;
@@ -460,18 +512,27 @@ function viewDocument(documentId) {
                 const fileFields = [];
                 const otherMetadata = [];
                 
+                // Check if we have separate address fields to combine
+                const hasAddressFields = data.document.metadata.address_region || 
+                                       data.document.metadata.address_province || 
+                                       data.document.metadata.address_citymun || 
+                                       data.document.metadata.address_barangay;
+                
+                let addressProcessed = false;
+                
                 for (const [key, value] of Object.entries(data.document.metadata)) {
                     if (value.type === 'file') {
                         fileFields.push({key, value});
                     } else if (value.type === 'reference' && value.book_image_path) {
+                        const fieldLabel = value.label || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         otherMetadata.push({
                             key, 
                             value,
                             html: `<tr>
-                                      <td><strong>${value.label || key}</strong></td>
+                                      <td><strong>${fieldLabel}</strong></td>
                                       <td>
                                           <div class="reference-field-container">
-                                              <span class="reference-field-value">${value.value}</span>
+                                              <span class="reference-field-value">${value.book_title || value.value}</span>
                                               <div class="reference-field-buttons">
                                                   <button class="btn btn-primary btn-small" onclick="previewReferenceImage('${encodeURIComponent(value.book_image_path)}', '${value.value}')">
                                                       View Reference
@@ -484,19 +545,53 @@ function viewDocument(documentId) {
                                       </td>
                                    </tr>`
                         });
+                    } else if (hasAddressFields && (key === 'address_region' || key === 'address_province' || key === 'address_citymun' || key === 'address_barangay')) {
+                        // Skip individual address fields if we're combining them
+                        if (!addressProcessed) {
+                            const regionCode = data.document.metadata.address_region?.value || '';
+                            const provinceCode = data.document.metadata.address_province?.value || '';
+                            const citymunCode = data.document.metadata.address_citymun?.value || '';
+                            const barangayCode = data.document.metadata.address_barangay?.value || '';
+                            
+                            if (regionCode || provinceCode || citymunCode || barangayCode) {
+                                otherMetadata.push({
+                                    key: 'address',
+                                    value: {label: 'Address'},
+                                    html: `<tr>
+                                              <td><strong>Address</strong></td>
+                                              <td id="address-display-${Date.now()}">Loading...</td>
+                                           </tr>`
+                                });
+                                
+                                // Resolve location codes asynchronously
+                                const addressDisplayId = `address-display-${Date.now()}`;
+                                setTimeout(() => {
+                                    resolveLocationCodes(regionCode, provinceCode, citymunCode, barangayCode)
+                                        .then(resolvedAddress => {
+                                            const addressElement = document.getElementById(addressDisplayId);
+                                            if (addressElement) {
+                                                addressElement.textContent = resolvedAddress;
+                                            }
+                                        });
+                                }, 100);
+                            }
+                            addressProcessed = true;
+                        }
                     } else if (value.type === 'cascading_dropdown') {
                         // Format cascading dropdown data
+                        const fieldLabel = value.label || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         const formattedValue = formatCascadingDropdownValue(value.value);
                         otherMetadata.push({
                             key,
                             value,
-                            html: `<tr><td><strong>${value.label || key}</strong></td><td>${formattedValue}</td></tr>`
+                            html: `<tr><td><strong>${fieldLabel}</strong></td><td>${formattedValue}</td></tr>`
                         });
-                    } else {
+                    } else if (value.value) {
+                        const fieldLabel = value.label || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                         otherMetadata.push({
                             key,
                             value,
-                            html: `<tr><td><strong>${value.label || key}</strong></td><td>${value.value}</td></tr>`
+                            html: `<tr><td><strong>${fieldLabel}</strong></td><td>${value.value}</td></tr>`
                         });
                     }
                 }
@@ -600,6 +695,44 @@ function formatCascadingDropdownValue(value) {
     } catch (e) {
         // If parsing fails, return the original value
         return value.toString();
+    }
+}
+
+// Function to resolve location codes to readable names
+async function resolveLocationCodes(regionCode, provinceCode, citymunCode, barangayCode) {
+    try {
+        const response = await fetch('api/resolve_locations.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                region: regionCode,
+                province: provinceCode,
+                citymun: citymunCode,
+                barangay: barangayCode
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to resolve location codes');
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            const parts = [];
+            if (data.locations.region) parts.push(data.locations.region);
+            if (data.locations.province) parts.push(data.locations.province);
+            if (data.locations.citymun) parts.push(data.locations.citymun);
+            if (data.locations.barangay) parts.push(data.locations.barangay);
+            
+            return parts.length > 0 ? parts.join(' > ') : 'N/A';
+        }
+        
+        return 'N/A';
+    } catch (error) {
+        console.error('Error resolving location codes:', error);
+        return `Region: ${regionCode} | Province: ${provinceCode} | City/Municipality: ${citymunCode} | Barangay: ${barangayCode}`;
     }
 }
 
@@ -759,6 +892,639 @@ if (typeof openReferenceSelector === 'undefined') {
     script.src = 'includes/reference_selector.js';
     document.head.appendChild(script);
 }
+
+// PDF Generation functionality
+// currentDocumentId already declared above
+
+function openPdfModal(documentId) {
+    currentDocumentId = documentId;
+    
+    // Create modal if it doesn't exist
+    if (!document.getElementById('pdfGenerationModal')) {
+        createPdfModal();
+    }
+    
+    document.getElementById('pdfGenerationModal').style.display = 'block';
+    document.getElementById('pdfTemplateSelect').value = '';
+    document.getElementById('generatePdfBtn').disabled = true;
+    const fieldSection = document.getElementById('fieldMappingSection');
+    if (fieldSection) fieldSection.style.display = 'none';
+}
+
+function closePdfModal() {
+    const modal = document.getElementById('pdfGenerationModal');
+    if (modal) modal.style.display = 'none';
+    currentDocumentId = null;
+}
+
+function createPdfModal() {
+    const modalHtml = `
+        <div id="pdfGenerationModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Generate PDF</h2>
+                    <span class="close" onclick="closePdfModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="pdfTemplateSelect">Select PDF Template</label>
+                        <select id="pdfTemplateSelect" class="form-control">
+                            <option value="">Choose a template...</option>
+                            <?php foreach ($pdf_templates as $template): ?>
+                                <option value="<?php echo $template['id']; ?>" 
+                                        data-document-type="<?php echo $template['document_type_id']; ?>">
+                                    <?php echo htmlspecialchars($template['name']); ?>
+                                    <?php if ($template['document_type_name']): ?>
+                                        (<?php echo htmlspecialchars($template['document_type_name']); ?>)
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div id="fieldMappingSection" style="display: none;">
+                        <h4>Field Mapping</h4>
+                        <div id="fieldMappingContainer">
+                            <!-- Field mapping will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closePdfModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="generatePdf()" id="generatePdfBtn" disabled>
+                        Generate PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add event listener for template selection
+    const pdfTemplateSelect = document.getElementById('pdfTemplateSelect');
+    if (pdfTemplateSelect) {
+        pdfTemplateSelect.addEventListener('change', function() {
+            const templateId = this.value;
+            const generateBtn = document.getElementById('generatePdfBtn');
+            
+            if (templateId) {
+                generateBtn.disabled = false;
+                loadFieldMapping(templateId);
+            } else {
+                generateBtn.disabled = true;
+                const fieldSection = document.getElementById('fieldMappingSection');
+                if (fieldSection) fieldSection.style.display = 'none';
+            }
+        });
+    }
+}
+
+async function loadFieldMapping(templateId) {
+    try {
+        const response = await fetch(`api/pdf_generation.php?action=get_template_fields&template_id=${templateId}`);
+        const data = await response.json();
+        
+        if (data.success && data.fields) {
+            displayFieldMapping(data.fields);
+        }
+    } catch (error) {
+        console.error('Error loading field mapping:', error);
+    }
+}
+
+function displayFieldMapping(fields) {
+    const container = document.getElementById('fieldMappingContainer');
+    const section = document.getElementById('fieldMappingSection');
+    
+    if (fields && fields.length > 0) {
+        container.innerHTML = fields.map(field => `
+            <div class="form-group">
+                <label>${escapeHtml(field.name)}</label>
+                <input type="text" class="form-control" 
+                       data-field="${field.name}" 
+                       placeholder="Enter value for ${field.name}">
+            </div>
+        `).join('');
+        section.style.display = 'block';
+    } else {
+        section.style.display = 'none';
+    }
+}
+
+async function generatePdf() {
+    if (!currentDocumentId) return;
+    
+    const templateId = document.getElementById('pdfTemplateSelect').value;
+    if (!templateId) return;
+    
+    try {
+        const generateBtn = document.getElementById('generatePdfBtn');
+        generateBtn.disabled = true;
+        generateBtn.textContent = 'Generating...';
+        
+        const formData = new FormData();
+        formData.append('action', 'generate_pdf');
+        formData.append('document_id', currentDocumentId);
+        formData.append('template_id', templateId);
+        
+        // Collect field mapping data
+        const fieldInputs = document.querySelectorAll('#fieldMappingContainer input');
+        const fieldData = {};
+        fieldInputs.forEach(input => {
+            if (input.value.trim()) {
+                fieldData[input.dataset.field] = input.value.trim();
+            }
+        });
+        formData.append('field_data', JSON.stringify(fieldData));
+        
+        const response = await fetch('api/pdf_generation.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('PDF generated successfully!');
+            if (data.download_url) {
+                window.open(data.download_url, '_blank');
+            }
+            closePdfModal();
+        } else {
+            alert('Error generating PDF: ' + (data.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error generating PDF:', error);
+        alert('Error generating PDF. Please try again.');
+    } finally {
+        const generateBtn = document.getElementById('generatePdfBtn');
+        generateBtn.disabled = false;
+        generateBtn.textContent = 'Generate PDF';
+    }
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+}
+
+// Note: editDocument and deleteDocument functions are already defined above
+
+function downloadDocument(documentId) {
+    window.open(`api/download_document.php?id=${documentId}`, '_blank');
+}
+
+// PDF generation modal variables
+if (typeof currentDocumentId === 'undefined') {
+    var currentDocumentId = null;
+}
+
+// openPdfModal function already defined above
+
+function createPdfModal() {
+    const modalHtml = `
+        <div id="pdfGenerationModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Generate PDF</h3>
+                    <span class="close" onclick="closePdfModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="pdfTemplateSelect">Select PDF Template:</label>
+                        <select id="pdfTemplateSelect" onchange="onTemplateSelect()">
+                            <option value="">-- Select Template --</option>
+                        </select>
+                    </div>
+                    <div id="fieldMappingSection" style="display: none;">
+                        <h4>Field Mapping</h4>
+                        <div id="fieldMappingList"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="generatePdfBtn" class="btn btn-primary" onclick="generatePdfFromModal()" disabled>
+                        Generate PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="closePdfModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    loadPdfTemplates();
+}
+
+function closePdfModal() {
+    const modal = document.getElementById('pdfGenerationModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function loadPdfTemplates() {
+    fetch('api/template_management_new.php?action=list')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('pdfTemplateSelect');
+            if (data.success && data.templates) {
+                data.templates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = template.name;
+                    select.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading templates:', error));
+}
+
+function onTemplateSelect() {
+    const templateId = document.getElementById('pdfTemplateSelect').value;
+    const generateBtn = document.getElementById('generatePdfBtn');
+    
+    if (templateId) {
+        generateBtn.disabled = false;
+        loadTemplateFields(templateId);
+    } else {
+        generateBtn.disabled = true;
+        document.getElementById('fieldMappingSection').style.display = 'none';
+    }
+}
+
+function loadTemplateFields(templateId) {
+    fetch(`api/pdf_generation.php?action=get_template_fields&template_id=${templateId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.fields && data.fields.length > 0) {
+                displayFieldMapping(data.fields);
+            }
+        })
+        .catch(error => console.error('Error loading template fields:', error));
+}
+
+function displayFieldMapping(fields) {
+    const section = document.getElementById('fieldMappingSection');
+    const list = document.getElementById('fieldMappingList');
+    
+    list.innerHTML = '';
+    
+    fields.forEach(field => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'field-mapping-item';
+        fieldDiv.innerHTML = `
+            <label>${field.label || field.name} (${field.type}):</label>
+            <span>Will be populated from document data</span>
+        `;
+        list.appendChild(fieldDiv);
+    });
+    
+    section.style.display = 'block';
+}
+
+function generatePdfFromModal() {
+    const templateId = document.getElementById('pdfTemplateSelect').value;
+    
+    if (!currentDocumentId || !templateId) {
+        alert('Please select a template');
+        return;
+    }
+    
+    // Generate PDF
+    const url = `api/pdf_generation.php?action=generate_pdf&document_id=${currentDocumentId}&template_id=${templateId}`;
+    window.open(url, '_blank');
+    
+    closePdfModal();
+}
+
+// Add CSS for the modal
+const modalStyles = `
+<style>
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.field-mapping-item {
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.field-mapping-item label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.field-mapping-item span {
+    color: #666;
+    font-style: italic;
+}
+</style>
+`;
+
+// Add styles to document head
+if (!document.getElementById('pdfModalStyles')) {
+    const styleElement = document.createElement('div');
+    styleElement.id = 'pdfModalStyles';
+    styleElement.innerHTML = modalStyles;
+    document.head.appendChild(styleElement);
+}
+
+// Ensure all PDF modal functions are available globally
+window.openPdfModal = openPdfModal;
+window.closePdfModal = closePdfModal;
+window.createPdfModal = createPdfModal;
+window.loadPdfTemplates = loadPdfTemplates;
+window.onTemplateSelect = onTemplateSelect;
+window.loadTemplateFields = loadTemplateFields;
+window.displayFieldMapping = displayFieldMapping;
+window.generatePdfFromModal = generatePdfFromModal;
+
+// Preview PDF with embedded fields function
+function previewPdfWithFields(documentId) {
+    // First, try to get the document to check its type
+    fetch(`api/document_details.php?id=${documentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.document) {
+                const documentTypeId = data.document.document_type_id;
+                const templates = <?php echo json_encode($pdf_templates); ?>;
+                
+                if (!templates || templates.length === 0) {
+                    alert('No PDF templates available. Please create a template first.');
+                    return;
+                }
+                
+                // Try to find a template assigned to this document type
+                const assignedTemplate = templates.find(t => t.document_type_id == documentTypeId);
+                
+                if (assignedTemplate) {
+                    // Use the assigned template automatically
+                    openPdfPreview(documentId, assignedTemplate.id);
+                    return;
+                }
+                
+                // If no assigned template, fall back to selection
+                if (templates.length === 1) {
+                    const templateId = templates[0].id;
+                    openPdfPreview(documentId, templateId);
+                    return;
+                }
+                
+                // Multiple templates - show selection modal
+                showTemplateSelectionModal(documentId, templates);
+            } else {
+                // Fallback if document details can't be fetched
+                const templates = <?php echo json_encode($pdf_templates); ?>;
+                if (templates.length === 1) {
+                    openPdfPreview(documentId, templates[0].id);
+                } else {
+                    showTemplateSelectionModal(documentId, templates);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching document details:', error);
+            // Fallback to template selection
+            const templates = <?php echo json_encode($pdf_templates); ?>;
+            if (templates.length === 1) {
+                openPdfPreview(documentId, templates[0].id);
+            } else {
+                showTemplateSelectionModal(documentId, templates);
+            }
+        });
+}
+
+function showTemplateSelectionModal(documentId, templates) {
+    // Create template selection modal
+    const modalHtml = `
+        <div id="templateSelectionModal" class="modal" style="display: block;">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3>Select Template for Preview</h3>
+                    <span class="close" onclick="closeTemplateSelectionModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="previewTemplateSelect">Choose a template to preview:</label>
+                        <select id="previewTemplateSelect" class="form-control">
+                            <option value="">-- Select Template --</option>
+                            ${templates.map(template => `
+                                <option value="${template.id}">
+                                    ${escapeHtml(template.name)}
+                                    ${template.document_type_name ? `(${escapeHtml(template.document_type_name)})` : ''}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeTemplateSelectionModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="previewWithSelectedTemplate(${documentId})" id="previewBtn" disabled>
+                        Preview PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('templateSelectionModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Add event listener for template selection
+    const templateSelect = document.getElementById('previewTemplateSelect');
+    const previewBtn = document.getElementById('previewBtn');
+    
+    templateSelect.addEventListener('change', function() {
+        previewBtn.disabled = !this.value;
+    });
+}
+
+function closeTemplateSelectionModal() {
+    const modal = document.getElementById('templateSelectionModal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function previewWithSelectedTemplate(documentId) {
+    const templateId = document.getElementById('previewTemplateSelect').value;
+    if (!templateId) {
+        alert('Please select a template');
+        return;
+    }
+    
+    closeTemplateSelectionModal();
+    openPdfPreview(documentId, templateId);
+}
+
+function openPdfPreview(documentId, templateId) {
+    // Show loading indicator
+    const loadingToast = showLoadingToast('Generating PDF preview...');
+    
+    // Open PDF preview with embedded data using the new generate_pdf_with_fields.php
+    const previewUrl = `api/generate_pdf_with_fields.php?document_id=${documentId}&template_id=${templateId}`;
+    const previewWindow = window.open(previewUrl, '_blank');
+    
+    // Check if popup was blocked
+    if (!previewWindow || previewWindow.closed || typeof previewWindow.closed == 'undefined') {
+        hideLoadingToast(loadingToast);
+        alert('Popup blocked! Please allow popups for this site and try again.');
+        return;
+    }
+    
+    // Hide loading indicator after a short delay
+    setTimeout(() => {
+        hideLoadingToast(loadingToast);
+    }, 2000);
+}
+
+function showLoadingToast(message) {
+    const toast = document.createElement('div');
+    toast.id = 'loadingToast';
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #007bff;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        z-index: 10000;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    
+    toast.innerHTML = `
+        <div style="width: 16px; height: 16px; border: 2px solid #ffffff40; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        ${message}
+    `;
+    
+    // Add spinner animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(toast);
+    return toast;
+}
+
+function hideLoadingToast(toast) {
+    if (toast && toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+    }
+}
+
+// Initialize modal on page load
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // PDF modal functions are loaded from pdf-modal.js
+});
+
+</script>
+
+<!-- Include PDF Modal JavaScript -->
+<script src="assets/js/pdf-modal.js"></script>
+<script>
+// Functions are loaded and ready
 </script>
 
 <?php renderPageEnd(); ?>

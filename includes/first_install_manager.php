@@ -71,14 +71,67 @@ class FirstInstallManager {
      * Mark installation as complete
      */
     public function markInstallComplete() {
+        // Include version.php to get latest version constants
+        require_once __DIR__ . '/../config/version.php';
+        
         $install_data = [
             'installed_at' => date('Y-m-d H:i:s'),
-            'version' => APP_VERSION ?? '1.0.0',
+            'version' => defined('APP_VERSION') ? APP_VERSION : '1.0.7',
+            'build' => defined('APP_BUILD') ? APP_BUILD : '2025.01.15.007',
+            'app_name' => defined('APP_NAME') ? APP_NAME : 'Archiving System',
             'php_version' => PHP_VERSION,
-            'server_info' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown'
+            'server_info' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'installation_id' => uniqid('install_', true),
+            'features_installed' => [
+                'pdf_template_manager' => true,
+                'multi_page_support' => true,
+                'modern_ui' => true,
+                'document_management' => true,
+                'user_management' => true,
+                'branding_system' => true,
+                'backup_system' => true
+            ],
+            'database_schema_version' => '1.0.7',
+            'initial_setup_complete' => true
         ];
         
-        return file_put_contents($this->install_flag_file, json_encode($install_data, JSON_PRETTY_PRINT));
+        $result = file_put_contents($this->install_flag_file, json_encode($install_data, JSON_PRETTY_PRINT));
+        
+        // Clear installation session data
+        unset($_SESSION['install_in_progress']);
+        unset($_SESSION['install_db_config']);
+        unset($_SESSION['install_admin_config']);
+        unset($_SESSION['install_step_completed']);
+        
+        return $result;
+    }
+    
+    /**
+     * Get installation information
+     */
+    public function getInstallationInfo() {
+        if (!file_exists($this->install_flag_file)) {
+            return null;
+        }
+        
+        $content = file_get_contents($this->install_flag_file);
+        return json_decode($content, true);
+    }
+    
+    /**
+     * Check if installation is complete and up to date
+     */
+    public function isInstallationCurrent() {
+        $install_info = $this->getInstallationInfo();
+        if (!$install_info) {
+            return false;
+        }
+        
+        require_once __DIR__ . '/../config/version.php';
+        $current_version = defined('APP_VERSION') ? APP_VERSION : '1.0.7';
+        
+        return isset($install_info['version']) && 
+               version_compare($install_info['version'], $current_version, '>=');
     }
 }
 ?>
